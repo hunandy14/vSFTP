@@ -109,4 +109,60 @@ Describe "ConvertFrom-ConnectionString" -Tag "Unit" {
         $result.KeyFile | Should -Be "/path/to/key"
         $result.Port | Should -Be 22
     }
+
+    It "應該在空字串時拋出錯誤" {
+        { 
+            InModuleScope vSFTP { 
+                ConvertFrom-ConnectionString "" 
+            } 
+        } | Should -Throw  # PowerShell 拒絕空字串作為 Mandatory 參數
+    }
+
+    It "應該在只有分號時拋出錯誤" {
+        { 
+            InModuleScope vSFTP { 
+                ConvertFrom-ConnectionString ";;;" 
+            } 
+        } | Should -Throw "*Missing required fields*"
+    }
+
+    It "應該在重複欄位時使用後者的值" {
+        $result = InModuleScope vSFTP {
+            ConvertFrom-ConnectionString "host=first.com;user=admin;key=/path/to/key;host=second.com"
+        }
+        
+        $result.Host | Should -Be "second.com"
+    }
+
+    It "應該在 port 非數字時拋出錯誤" {
+        { 
+            InModuleScope vSFTP { 
+                ConvertFrom-ConnectionString "host=example.com;user=admin;key=/path/to/key;port=abc" 
+            } 
+        } | Should -Throw
+    }
+
+    It "應該支援 user 包含 @ 符號" {
+        $result = InModuleScope vSFTP {
+            ConvertFrom-ConnectionString "host=example.com;user=test@domain.com;key=/path/to/key"
+        }
+        
+        $result.User | Should -Be "test@domain.com"
+    }
+
+    It "應該支援 key 包含空格的路徑" {
+        $result = InModuleScope vSFTP {
+            ConvertFrom-ConnectionString "host=example.com;user=admin;key=/path/to/my key"
+        }
+        
+        $result.KeyFile | Should -Be "/path/to/my key"
+    }
+
+    It "應該支援值包含等號" {
+        $result = InModuleScope vSFTP {
+            ConvertFrom-ConnectionString "host=example.com;user=admin;key=/path/to/key=test"
+        }
+        
+        $result.KeyFile | Should -Be "/path/to/key=test"
+    }
 }
