@@ -2,12 +2,10 @@ function Test-FileHash {
     <#
     .SYNOPSIS
         驗證檔案的雜湊是否符合預期。
-    .DESCRIPTION
-        比較本地與遠端（或預期）的 SHA256 雜湊值。
     .PARAMETER LocalPath
         本地檔案路徑。
     .PARAMETER RemotePath
-        遠端檔案路徑（用於顯示）。
+        遠端檔案路徑。
     .PARAMETER SessionId
         Posh-SSH 工作階段 ID（PUT 操作需要）。
     .PARAMETER RemoteOS
@@ -16,8 +14,6 @@ function Test-FileHash {
         預期的雜湊值（GET 操作使用）。
     .PARAMETER Action
         操作類型：'put' 或 'get'。
-    .OUTPUTS
-        PSCustomObject，包含 Success、LocalHash、RemoteHash 屬性。
     #>
     [CmdletBinding()]
     param(
@@ -28,9 +24,7 @@ function Test-FileHash {
         [string]$RemotePath,
         
         [int]$SessionId,
-        
         [string]$RemoteOS,
-        
         [string]$ExpectedHash,
         
         [Parameter(Mandatory)]
@@ -46,15 +40,17 @@ function Test-FileHash {
     }
     
     try {
-        # 計算本地雜湊
-        $result.LocalHash = Get-LocalFileHash -Path $LocalPath
+        if (-not (Test-Path $LocalPath)) {
+            $result.Error = "Local file not found: $LocalPath"
+            return $result
+        }
+        
+        $result.LocalHash = (Get-FileHash -Path $LocalPath -Algorithm SHA256).Hash.ToUpper()
         
         if ($Action -eq 'put') {
-            # PUT：從遠端取得雜湊並比較
             $result.RemoteHash = Get-RemoteFileHash -SessionId $SessionId -RemotePath $RemotePath -RemoteOS $RemoteOS
             $result.Success = ($result.LocalHash -eq $result.RemoteHash)
         } else {
-            # GET：與預期雜湊比較
             $result.RemoteHash = $ExpectedHash
             if (-not $ExpectedHash) {
                 $result.Error = "No pre-transfer hash recorded"

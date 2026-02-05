@@ -2,8 +2,6 @@ function Invoke-vSFTP {
     <#
     .SYNOPSIS
         執行帶有 SHA256 雜湊驗證的 SFTP 批次腳本。
-    .DESCRIPTION
-        解析並執行 SFTP 批次腳本，然後使用 SHA256 雜湊驗證所有傳輸的檔案。
     .PARAMETER ScriptFile
         SFTP 批次腳本的路徑。
     .PARAMETER NoVerify
@@ -36,17 +34,23 @@ function Invoke-vSFTP {
     $EXIT_VERIFY_FAILED = 1
     $EXIT_TRANSFER_FAILED = 2
     $EXIT_CONNECTION_FAILED = 3
-    $CONNECTION_TIMEOUT = 30
     
-    # 狀態變數
     $sshSession = $null
     $exitCode = $EXIT_SUCCESS
     
     try {
-        Write-Banner
+        # 標題
+        Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+        Write-Host "  vSFTP - SFTP with Hash Verification" -ForegroundColor Cyan
+        Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+        Write-Host ""
         
-        #region 驗證環境變數
-        $missingVars = Test-Environment
+        # 驗證環境變數
+        $missingVars = @()
+        if (-not $env:SFTP_HOST) { $missingVars += 'SFTP_HOST' }
+        if (-not $env:SFTP_USER) { $missingVars += 'SFTP_USER' }
+        if (-not $env:SFTP_KEYFILE) { $missingVars += 'SFTP_KEYFILE' }
+        
         if ($missingVars.Count -gt 0) {
             $missingVars | ForEach-Object { Write-Host "✗ $_ environment variable not set" -ForegroundColor Red }
             $exitCode = $EXIT_CONNECTION_FAILED
@@ -63,9 +67,8 @@ function Invoke-vSFTP {
         Write-Host "Host: $($config.User)@$($config.Host):$($config.Port)" -ForegroundColor Gray
         Write-Host "Auth: Key ($($config.KeyFile))" -ForegroundColor Gray
         Write-Host ""
-        #endregion
         
-        #region 解析腳本
+        # 解析腳本
         Write-Host "► Parsing script: $ScriptFile" -ForegroundColor Yellow
         
         if (-not (Test-Path $ScriptFile)) {
@@ -93,9 +96,8 @@ function Invoke-vSFTP {
             $exitCode = $EXIT_TRANSFER_FAILED
             return
         }
-        #endregion
         
-        #region 試執行模式
+        # 試執行模式
         if ($DryRun) {
             Write-Host "► Dry Run - Operations that would be performed:" -ForegroundColor Yellow
             Write-Host ""
@@ -107,9 +109,8 @@ function Invoke-vSFTP {
             Write-Host "Dry run complete. No files transferred." -ForegroundColor Green
             return
         }
-        #endregion
         
-        #region 建立 SSH 連線
+        # 建立 SSH 連線
         $remoteOS = $null
         
         if (-not $NoVerify) {
@@ -120,7 +121,7 @@ function Invoke-vSFTP {
                 Port              = $config.Port
                 Credential        = New-Object PSCredential($config.User, (New-Object SecureString))
                 KeyFile           = $config.KeyFile
-                ConnectionTimeout = $CONNECTION_TIMEOUT
+                ConnectionTimeout = 30
                 AcceptKey         = $true
                 Force             = $SkipHostKeyCheck.IsPresent
             }
@@ -139,16 +140,13 @@ function Invoke-vSFTP {
             Write-Host "  Remote OS: $remoteOS" -ForegroundColor Gray
             Write-Host ""
         }
-        #endregion
         
-        #region 展開萬用字元並取得 GET 的遠端雜湊
+        # 展開萬用字元並取得 GET 的遠端雜湊
         $remoteHashes = @{}
         
         if (-not $NoVerify -and $getOps.Count -gt 0) {
-            # 展開萬用字元
             $getOps = Expand-GetOperations -Operations $getOps -SessionId $sshSession.SessionId
             
-            # 取得遠端雜湊
             Write-Host "► Getting remote hashes for GET operations..." -ForegroundColor Yellow
             foreach ($op in $getOps) {
                 try {
@@ -162,9 +160,8 @@ function Invoke-vSFTP {
             }
             Write-Host ""
         }
-        #endregion
         
-        #region 執行傳輸
+        # 執行傳輸
         Write-Host "► Executing SFTP transfer..." -ForegroundColor Yellow
         Write-Host ""
         
@@ -177,12 +174,14 @@ function Invoke-vSFTP {
         }
         
         Write-Host "`n  Transfer completed`n" -ForegroundColor Gray
-        #endregion
         
-        #region 雜湊驗證
+        # 雜湊驗證
         if ($NoVerify) {
             Write-Host "► Hash verification skipped (-NoVerify)" -ForegroundColor Yellow
-            Write-Summary -Skipped
+            Write-Host ""
+            Write-Host "───────────────────────────────────────────────────────────────" -ForegroundColor Cyan
+            Write-Host "  Transfer completed (verification skipped)" -ForegroundColor Green
+            Write-Host "───────────────────────────────────────────────────────────────" -ForegroundColor Cyan
             return
         }
         
@@ -192,7 +191,6 @@ function Invoke-vSFTP {
         $passed = 0
         $failed = 0
         
-        # 合併 PUT 和 GET 操作進行驗證
         $allOps = @()
         $allOps += $putOps | ForEach-Object { [PSCustomObject]@{ Op = $_; Action = 'put'; ExpectedHash = $null } }
         $allOps += $getOps | ForEach-Object { [PSCustomObject]@{ Op = $_; Action = 'get'; ExpectedHash = $remoteHashes[$_.RemotePath] } }
@@ -224,12 +222,16 @@ function Invoke-vSFTP {
             }
         }
         
-        Write-Summary -Passed $passed -Failed $failed
+        # 摘要
+        Write-Host ""
+        Write-Host "───────────────────────────────────────────────────────────────" -ForegroundColor Cyan
+        $summaryColor = if ($failed -eq 0) { 'Green' } else { 'Red' }
+        Write-Host "  Summary: $passed passed, $failed failed" -ForegroundColor $summaryColor
+        Write-Host "───────────────────────────────────────────────────────────────" -ForegroundColor Cyan
         
         if ($failed -gt 0) {
             $exitCode = $EXIT_VERIFY_FAILED
         }
-        #endregion
         
     } finally {
         if ($sshSession) {
