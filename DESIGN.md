@@ -1,73 +1,73 @@
-# vSFTP Design Document
+# vSFTP 設計文件
 
-## Overview
+## 概述
 
-vSFTP is a PowerShell tool that wraps SFTP transfers with SHA256 hash verification.
+vSFTP 是一個 PowerShell 工具，在 SFTP 傳輸後進行 SHA256 雜湊驗證。
 
-## Architecture
+## 架構
 
 ```
 ┌────────────────────────────────────────────────────────────┐
 │                        Invoke-vSFTP                        │
 ├────────────────────────────────────────────────────────────┤
-│ 1. Parse Script                                            │
-│    • Track cd/lcd for path resolution                      │
-│    • Expand wildcards locally                              │
-│    • Build expected file list                              │
+│ 1. 解析腳本                                                │
+│    • 追蹤 cd/lcd 以解析路徑                                │
+│    • 展開本地萬用字元                                      │
+│    • 建立預期檔案清單                                      │
 ├────────────────────────────────────────────────────────────┤
-│ 2. Connect & Detect Remote OS                              │
+│ 2. 連線並偵測遠端作業系統                                  │
 │    • Posh-SSH: New-SSHSession                              │
-│    • Run: uname -s (Linux) or assume Windows               │
+│    • 執行: uname -s (Linux) 或假設為 Windows               │
 ├────────────────────────────────────────────────────────────┤
-│ 3. Pre-transfer: Get remote hash for GET operations        │
+│ 3. 傳輸前：取得 GET 操作的遠端雜湊                         │
 │    • Linux: sha256sum <file>                               │
 │    • Windows: powershell -c "(Get-FileHash).Hash"          │
 ├────────────────────────────────────────────────────────────┤
-│ 4. Execute Transfer                                        │
+│ 4. 執行傳輸                                                │
 │    • sftp.exe -b <script>                                  │
-│    • Show progress                                         │
+│    • 顯示進度                                              │
 ├────────────────────────────────────────────────────────────┤
-│ 5. Post-transfer: Hash Verification                        │
-│    • PUT: local hash vs remote hash                        │
-│    • GET: remote hash (from step 3) vs local hash          │
+│ 5. 傳輸後：雜湊驗證                                        │
+│    • PUT: 本地雜湊 vs 遠端雜湊                             │
+│    • GET: 遠端雜湊 (步驟 3) vs 本地雜湊                    │
 ├────────────────────────────────────────────────────────────┤
-│ 6. Output Results                                          │
-│    • Per-file status                                       │
-│    • Summary                                               │
+│ 6. 輸出結果                                                │
+│    • 每個檔案的狀態                                        │
+│    • 摘要                                                  │
 └────────────────────────────────────────────────────────────┘
 ```
 
-## Components
+## 元件
 
-### 1. Script Parser (`Parse-SftpScript`)
+### 1. 腳本解析器 (`Parse-SftpScript`)
 
-Parses SFTP batch script and extracts file operations.
+解析 SFTP 批次腳本並提取檔案操作。
 
-**Input:** Script file path, base local/remote directories
-**Output:** Array of transfer operations
+**輸入：** 腳本檔案路徑、基礎本地/遠端目錄
+**輸出：** 傳輸操作陣列
 
 ```powershell
 [PSCustomObject]@{
     Action     = "put" | "get"
-    LocalPath  = "C:\data\file.txt"      # Absolute path
-    RemotePath = "/upload/file.txt"      # Absolute path
-    Line       = 5                        # Source line number
+    LocalPath  = "C:\data\file.txt"      # 絕對路徑
+    RemotePath = "/upload/file.txt"      # 絕對路徑
+    Line       = 5                        # 來源行號
 }
 ```
 
-**Tracked Commands:**
-- `put <local> [remote]` - Add to transfer list
-- `get <remote> [local]` - Add to transfer list
-- `cd <path>` - Update remote working directory
-- `lcd <path>` - Update local working directory
+**追蹤的指令：**
+- `put <local> [remote]` - 加入傳輸清單
+- `get <remote> [local]` - 加入傳輸清單
+- `cd <path>` - 更新遠端工作目錄
+- `lcd <path>` - 更新本地工作目錄
 
-**Wildcard Expansion:**
-- Uses `Get-ChildItem` for local wildcards
-- Each expanded file becomes separate entry
+**萬用字元展開：**
+- 使用 `Get-ChildItem` 展開本地萬用字元
+- 每個展開的檔案成為獨立項目
 
-### 2. Remote OS Detector (`Get-RemoteOS`)
+### 2. 遠端作業系統偵測 (`Get-RemoteOS`)
 
-Detects remote operating system via SSH.
+透過 SSH 偵測遠端作業系統。
 
 ```powershell
 $result = Invoke-SSHCommand -SessionId $id -Command "uname -s"
@@ -78,26 +78,26 @@ if ($result.ExitStatus -eq 0) {
 }
 ```
 
-### 3. Hash Calculator
+### 3. 雜湊計算
 
-**Local (PowerShell):**
+**本地 (PowerShell)：**
 ```powershell
 (Get-FileHash -Path $path -Algorithm SHA256).Hash
 ```
 
-**Remote Linux:**
+**遠端 Linux：**
 ```bash
 sha256sum /path/to/file | cut -d' ' -f1
 ```
 
-**Remote Windows:**
+**遠端 Windows：**
 ```powershell
 powershell -NoProfile -Command "(Get-FileHash -Path 'C:\path\to\file' -Algorithm SHA256).Hash"
 ```
 
-### 4. Transfer Executor
+### 4. 傳輸執行器
 
-Uses native `sftp.exe` for actual transfers:
+使用原生 `sftp.exe` 執行實際傳輸：
 
 ```powershell
 $process = Start-Process -FilePath "sftp" -ArgumentList @(
@@ -108,68 +108,68 @@ $process = Start-Process -FilePath "sftp" -ArgumentList @(
 ) -Wait -PassThru -NoNewWindow
 
 if ($process.ExitCode -ne 0) {
-    # Transfer failed
+    # 傳輸失敗
 }
 ```
 
-## Data Flow
+## 資料流程
 
-### PUT Operation
+### PUT 操作
 
 ```
-1. Parse: put local.txt /remote/path/
+1. 解析: put local.txt /remote/path/
    └─> {Action:put, Local:C:\data\local.txt, Remote:/remote/path/local.txt}
 
-2. Calculate local hash
+2. 計算本地雜湊
    └─> Hash: ABC123...
 
-3. sftp.exe executes transfer
+3. sftp.exe 執行傳輸
 
-4. Calculate remote hash via SSH
+4. 透過 SSH 計算遠端雜湊
    └─> Hash: ABC123...
 
-5. Compare hashes
-   └─> Match: ✓
+5. 比對雜湊
+   └─> 相符: ✓
 ```
 
-### GET Operation
+### GET 操作
 
 ```
-1. Parse: get /remote/file.txt
+1. 解析: get /remote/file.txt
    └─> {Action:get, Local:C:\cwd\file.txt, Remote:/remote/file.txt}
 
-2. Get remote hash BEFORE transfer
+2. 傳輸前取得遠端雜湊
    └─> ExpectedHash: ABC123...
 
-3. sftp.exe executes transfer
+3. sftp.exe 執行傳輸
 
-4. Calculate local hash
+4. 計算本地雜湊
    └─> ActualHash: ABC123...
 
-5. Compare hashes
-   └─> Match: ✓
+5. 比對雜湊
+   └─> 相符: ✓
 ```
 
-## Error Handling
+## 錯誤處理
 
-| Error Type | Exit Code | Behavior |
-|------------|-----------|----------|
-| Missing env vars | 3 | Abort immediately |
-| SSH connection failed | 3 | Abort immediately |
-| sftp.exe failed | 2 | Abort (or continue with -ContinueOnError) |
-| Hash mismatch | 1 | Abort (or continue with -ContinueOnError) |
-| Remote hash command failed | 1 | Abort (or continue with -ContinueOnError) |
+| 錯誤類型 | 結束碼 | 行為 |
+|----------|--------|------|
+| 缺少環境變數 | 3 | 立即中止 |
+| SSH 連線失敗 | 3 | 立即中止 |
+| sftp.exe 失敗 | 2 | 中止（或使用 -ContinueOnError 繼續）|
+| 雜湊不符 | 1 | 中止（或使用 -ContinueOnError 繼續）|
+| 遠端雜湊指令失敗 | 1 | 中止（或使用 -ContinueOnError 繼續）|
 
-## Timeouts
+## 逾時設定
 
-| Operation | Timeout |
-|-----------|---------|
-| SSH Connection | 30 seconds |
-| SSH Command | 300 seconds |
+| 操作 | 逾時 |
+|------|------|
+| SSH 連線 | 30 秒 |
+| SSH 指令 | 300 秒 |
 
-## Limitations
+## 限制
 
-1. No support for `reput`/`reget` (resume transfers)
-2. No tracking of `rm` commands (hash verification may fail if script deletes files)
-3. Wildcard expansion done locally (may differ from server-side expansion in edge cases)
-4. Requires both `sftp.exe` and Posh-SSH (dual connection)
+1. 不支援 `reput`/`reget`（續傳）
+2. 不追蹤 `rm` 指令（若腳本刪除檔案，雜湊驗證可能失敗）
+3. 萬用字元在本地展開（邊緣情況可能與伺服器端展開不同）
+4. 需要同時使用 `sftp.exe` 和 Posh-SSH（雙重連線）
