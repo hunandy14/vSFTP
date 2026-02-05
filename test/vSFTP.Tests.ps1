@@ -160,6 +160,44 @@ Describe "Expand-GetOperation" -Tag "Integration" {
         }
     }
 
+    It "應該拒絕含雙引號的模式" {
+        if (-not $script:ServerRunning) {
+            Set-ItResult -Skipped -Because "測試伺服器未運行"
+            return
+        }
+
+        InModuleScope vSFTP -Parameters @{ SessionId = $script:Session.SessionId } {
+            $ops = @([PSCustomObject]@{
+                Action      = 'get'
+                LocalPath   = '/tmp/test'
+                RemotePath  = '/tmp/file"*.log'
+                Line        = 1
+                HasWildcard = $true
+            })
+
+            { Expand-GetOperation -Operations $ops -SessionId $SessionId } | Should -Throw "*dangerous*"
+        }
+    }
+
+    It "應該拒絕含換行符的模式" {
+        if (-not $script:ServerRunning) {
+            Set-ItResult -Skipped -Because "測試伺服器未運行"
+            return
+        }
+
+        InModuleScope vSFTP -Parameters @{ SessionId = $script:Session.SessionId } {
+            $ops = @([PSCustomObject]@{
+                Action      = 'get'
+                LocalPath   = '/tmp/test'
+                RemotePath  = "/tmp/*.log`n;rm -rf /"
+                Line        = 1
+                HasWildcard = $true
+            })
+
+            { Expand-GetOperation -Operations $ops -SessionId $SessionId } | Should -Throw "*dangerous*"
+        }
+    }
+
     It "應該保留非萬用字元操作" {
         if (-not $script:ServerRunning) {
             Set-ItResult -Skipped -Because "測試伺服器未運行"

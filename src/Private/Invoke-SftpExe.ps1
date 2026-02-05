@@ -25,6 +25,21 @@
         [switch]$SkipHostKeyCheck
     )
 
+    # 驗證參數不含危險字元
+    $dangerousChars = '[`$;|<>&\r\n]'
+    if ($RemoteHost -match $dangerousChars) {
+        throw "Invalid host: contains dangerous characters"
+    }
+    if ($User -match $dangerousChars) {
+        throw "Invalid user: contains dangerous characters"
+    }
+    if ($KeyFile -match '[\r\n]') {
+        throw "Invalid key file path: contains newline"
+    }
+    if ($ScriptFile -match '[\r\n]') {
+        throw "Invalid script file path: contains newline"
+    }
+
     $hostKeyOption = if ($SkipHostKeyCheck) { "no" } else { "accept-new" }
 
     $sftpArgs = @(

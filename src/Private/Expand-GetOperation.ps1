@@ -43,8 +43,14 @@ function Expand-GetOperation {
         }
 
         # 驗證模式不含危險字元（只允許 * ? [ ] 和一般檔名字元）
-        if ($pattern -match "[;|`$``\\<>&']") {
+        # 禁止: ; | $ ` \ < > & ' " 換行符
+        if ($pattern -match '[;|$`\\<>&''"\r\n]') {
             throw "Invalid pattern contains dangerous characters: $pattern"
+        }
+        
+        # 驗證模式不為空
+        if ([string]::IsNullOrWhiteSpace($pattern)) {
+            throw "Invalid pattern: empty pattern"
         }
 
         # 目錄路徑用 Base64 編碼
