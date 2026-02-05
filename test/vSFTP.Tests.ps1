@@ -122,7 +122,7 @@ Describe "Expand-GetOperation" -Tag "Integration" {
         }
     }
 
-    It "應該拒絕含危險字元的模式" {
+    It "應該拒絕含危險字元的模式（分號）" {
         if (-not $script:ServerRunning) {
             Set-ItResult -Skipped -Because "測試伺服器未運行"
             return
@@ -133,6 +133,25 @@ Describe "Expand-GetOperation" -Tag "Integration" {
                 Action      = 'get'
                 LocalPath   = '/tmp/test'
                 RemotePath  = '/home/testuser/upload/;rm -rf /'
+                Line        = 1
+                HasWildcard = $true
+            })
+
+            { Expand-GetOperation -Operations $ops -SessionId $SessionId } | Should -Throw "*dangerous*"
+        }
+    }
+
+    It "應該拒絕含單引號的模式" {
+        if (-not $script:ServerRunning) {
+            Set-ItResult -Skipped -Because "測試伺服器未運行"
+            return
+        }
+
+        InModuleScope vSFTP -Parameters @{ SessionId = $script:Session.SessionId } {
+            $ops = @([PSCustomObject]@{
+                Action      = 'get'
+                LocalPath   = '/tmp/test'
+                RemotePath  = "/tmp/file'*.log"
                 Line        = 1
                 HasWildcard = $true
             })

@@ -37,8 +37,13 @@ function Expand-GetOperation {
         $dirPath = Split-Path $remotePath -Parent
         $pattern = Split-Path $remotePath -Leaf
 
+        # 空目錄路徑時預設為當前目錄
+        if ([string]::IsNullOrEmpty($dirPath)) {
+            $dirPath = "."
+        }
+
         # 驗證模式不含危險字元（只允許 * ? [ ] 和一般檔名字元）
-        if ($pattern -match '[;|$`\\<>&]') {
+        if ($pattern -match "[;|`$``\\<>&']") {
             throw "Invalid pattern contains dangerous characters: $pattern"
         }
 
