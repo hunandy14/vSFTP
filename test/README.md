@@ -4,7 +4,7 @@
 
 ```powershell
 # 啟動測試伺服器
-./test/init.ps1
+./dev.ps1
 
 # 設定環境變數
 $env:SFTP_HOST = "localhost"
@@ -19,7 +19,7 @@ Invoke-vSFTP -ScriptFile test/scripts/test-download.sftp
 Invoke-vSFTP -ScriptFile test/scripts/test-wildcard.sftp
 
 # 關閉測試伺服器
-./test/init.ps1 -Down
+./dev.ps1 -Down
 ```
 
 ## 測試伺服器資訊

@@ -18,17 +18,13 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$ProjectRoot = Split-Path $PSScriptRoot -Parent
+$ProjectRoot = $PSScriptRoot
 
-# 載入環境變數
-$envFile = Join-Path $PSScriptRoot ".env"
-if (Test-Path $envFile) {
-    Get-Content $envFile | ForEach-Object {
-        if ($_ -match '^([^#][^=]+)=(.*)$') {
-            [Environment]::SetEnvironmentVariable($Matches[1], $Matches[2])
-        }
-    }
-}
+# 測試環境變數（固定值）
+$env:SFTP_HOST = "localhost"
+$env:SFTP_PORT = "2222"
+$env:SFTP_USER = "testuser"
+$env:SFTP_KEYFILE = "secrets/id_ed25519"
 
 $sshKnownHosts = Join-Path $HOME ".ssh/known_hosts"
 $hostKeyEntry = "[localhost]:2222"
@@ -104,8 +100,8 @@ function Stop-TestServer {
 function Initialize-TestFiles {
     Write-Host "► 建立測試檔案..." -ForegroundColor Yellow
     
-    $localDir = Join-Path $PSScriptRoot "local"
-    $remoteDir = Join-Path $PSScriptRoot "remote"
+    $localDir = Join-Path $PSScriptRoot "test/local"
+    $remoteDir = Join-Path $PSScriptRoot "test/remote"
     
     # 本地測試檔案
     "Hello vSFTP - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Set-Content (Join-Path $localDir "test.txt")
@@ -136,7 +132,7 @@ function Show-Info {
     Write-Host '    Invoke-vSFTP -ScriptFile test/scripts/test-upload.sftp' -ForegroundColor Gray
     Write-Host ""
     Write-Host "  關閉環境:" -ForegroundColor White
-    Write-Host '    ./test/init.ps1 -Down' -ForegroundColor Gray
+    Write-Host '    ./dev.ps1 -Down' -ForegroundColor Gray
     Write-Host ""
 }
 
