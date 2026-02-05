@@ -12,6 +12,7 @@ Thumbs.db
 # Test files (keep structure, ignore data)
 test/local/*
 test/remote/*
+test/temp/
 !test/**/.gitkeep
 *.test.ps1
 
