@@ -6,7 +6,6 @@ BeforeAll {
 
 Describe "ConvertFrom-SftpScript" {
     BeforeAll {
-        $TestScriptsDir = Join-Path $PSScriptRoot "scripts"
         $TempDir = Join-Path $PSScriptRoot "temp"
         if (-not (Test-Path $TempDir)) {
             New-Item -ItemType Directory -Path $TempDir | Out-Null
