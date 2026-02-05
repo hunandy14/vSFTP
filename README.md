@@ -50,6 +50,9 @@ Invoke-vSFTP -ScriptFile ./upload.sftp -NoVerify
 
 # Continue on error
 Invoke-vSFTP -ScriptFile ./upload.sftp -ContinueOnError
+
+# Skip host key verification (for testing)
+Invoke-vSFTP -ScriptFile ./upload.sftp -SkipHostKeyCheck
 ```
 
 ## Environment Variables
