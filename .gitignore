@@ -18,3 +18,4 @@ test/remote/*
 # Secrets (SSH keys, credentials)
 secrets/
 .env
+test/.env
