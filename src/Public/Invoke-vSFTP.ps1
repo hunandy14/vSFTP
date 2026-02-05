@@ -101,9 +101,18 @@
 
             # 偵測 OS
             $uname = Invoke-SSHCommand -SessionId $sshSession.SessionId -Command "uname -s" -TimeOut 30
-            $remoteOS = if ($uname.ExitStatus -eq 0) {
-                switch -Regex ($uname.Output.Trim()) { 'Linux' { 'Linux' } 'Darwin' { 'macOS' } default { 'Linux' } }
-            } else { 'Windows' }
+            if ($uname.ExitStatus -ne 0) {
+                Write-Host "✗ Failed to detect remote OS (uname failed)" -ForegroundColor Red
+                $exitCode = $EXIT_CONNECTION_FAILED; return
+            }
+            $remoteOS = switch -Regex ($uname.Output.Trim()) {
+                'Linux'  { 'Linux' }
+                'Darwin' { 'macOS' }
+                default  { 
+                    Write-Host "✗ Unsupported remote OS: $($uname.Output.Trim())" -ForegroundColor Red
+                    $exitCode = $EXIT_CONNECTION_FAILED; return
+                }
+            }
             Write-Host "  Connected ($remoteOS)`n" -ForegroundColor Gray
 
             # 展開 GET 萬用字元並預取雜湊
