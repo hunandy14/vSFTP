@@ -54,29 +54,10 @@
             $exitCode = $EXIT_CONNECTION_FAILED; return
         }
 
-        # 格式：host=<host>;user=<user>;key=<keypath>[;port=<port>]
-        $config = @{ Port = 22 }  # port 預設值
-        $connStr -split ';' | ForEach-Object {
-            if ($_ -match '^([^=]+)=(.+)$') {
-                $k = $Matches[1].Trim().ToLower()
-                $v = $Matches[2].Trim()
-                switch ($k) {
-                    'host' { $config.Host = $v }
-                    'user' { $config.User = $v }
-                    'port' { $config.Port = [int]$v }
-                    'key'  { $config.KeyFile = $v }
-                }
-            }
-        }
-
-        # 驗證必要欄位
-        $missing = @()
-        if (-not $config.Host) { $missing += 'host' }
-        if (-not $config.User) { $missing += 'user' }
-        if (-not $config.KeyFile) { $missing += 'key' }
-        if ($missing) {
-            Write-Host "✗ Missing required fields: $($missing -join ', ')" -ForegroundColor Red
-            Write-Host "  Format: host=<host>;user=<user>;key=<keypath>[;port=<port>]" -ForegroundColor Gray
+        try {
+            $config = ConvertFrom-ConnectionString -ConnectionString $connStr
+        } catch {
+            Write-Host "✗ $_" -ForegroundColor Red
             $exitCode = $EXIT_CONNECTION_FAILED; return
         }
         Write-Host "Host: $($config.User)@$($config.Host):$($config.Port)" -ForegroundColor Gray
