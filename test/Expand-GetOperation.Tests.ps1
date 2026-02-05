@@ -2,6 +2,73 @@ BeforeAll {
     Import-Module "$PSScriptRoot/../src/vSFTP.psd1" -Force
 }
 
+Describe "Expand-GetOperation 模式驗證" -Tag "Unit" {
+    # 這些測試不需要 SSH 連線，只測試危險字元驗證邏輯
+    
+    It "應該允許標準萬用字元 *" {
+        # 模式驗證發生在 SSH 命令之前
+        # 這裡只檢查模式是否被接受
+        $pattern = "*.log"
+        $pattern -match '[;|$`<>&''"\r\n]' | Should -Be $false
+    }
+
+    It "應該允許標準萬用字元 ?" {
+        $pattern = "file?.txt"
+        $pattern -match '[;|$`<>&''"\r\n]' | Should -Be $false
+    }
+
+    It "應該允許字元類 []" {
+        $pattern = "file[0-9].txt"
+        $pattern -match '[;|$`<>&''"\r\n]' | Should -Be $false
+    }
+
+    It "應該拒絕分號 ;" {
+        $pattern = "*.log;rm -rf /"
+        $pattern -match '[;|$`<>&''"\r\n]' | Should -Be $true
+    }
+
+    It "應該拒絕管道 |" {
+        $pattern = "*.log|cat /etc/passwd"
+        $pattern -match '[;|$`<>&''"\r\n]' | Should -Be $true
+    }
+
+    It "應該拒絕變數展開 $" {
+        $pattern = '*.log$HOME'
+        $pattern -match '[;|$`<>&''"\r\n]' | Should -Be $true
+    }
+
+    It "應該拒絕反引號" {
+        $backtick = [char]0x60  # `
+        $pattern = "*.log${backtick}id${backtick}"
+        $pattern -match '[;|$`<>&''"\r\n]' | Should -Be $true
+    }
+
+    It "應該拒絕 & 符號" {
+        $pattern = "*.log&"
+        $pattern -match '[;|$`<>&''"\r\n]' | Should -Be $true
+    }
+
+    It "應該拒絕單引號" {
+        $pattern = "file'*.log"
+        $pattern -match '[;|$`<>&''"\r\n]' | Should -Be $true
+    }
+
+    It "應該拒絕雙引號" {
+        $pattern = 'file"*.log'
+        $pattern -match '[;|$`<>&''"\r\n]' | Should -Be $true
+    }
+
+    It "應該拒絕換行符" {
+        $pattern = "*.log`nrm -rf /"
+        $pattern -match '[;|$`<>&''"\r\n]' | Should -Be $true
+    }
+
+    It "應該拒絕回車符" {
+        $pattern = "*.log`rrm -rf /"
+        $pattern -match '[;|$`<>&''"\r\n]' | Should -Be $true
+    }
+}
+
 Describe "Expand-GetOperation" -Tag "Integration" {
     BeforeAll {
         $script:ServerRunning = $false

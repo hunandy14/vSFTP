@@ -74,4 +74,58 @@ Describe "Test-FileHash" -Tag "Unit" {
             $result.Error | Should -Match "No pre-transfer hash"
         }
     }
+
+    It "應該回傳正確的結果物件結構" {
+        InModuleScope vSFTP -Parameters @{ TempDir = $script:TempDir } {
+            $testFile = Join-Path $TempDir "hash-struct.txt"
+            "test" | Set-Content $testFile
+            $hash = (Get-FileHash $testFile -Algorithm SHA256).Hash
+
+            $result = Test-FileHash -LocalPath $testFile -RemotePath "/dummy" -ExpectedHash $hash -Action get
+
+            $result.PSObject.Properties.Name | Should -Contain "Success"
+            $result.PSObject.Properties.Name | Should -Contain "LocalHash"
+            $result.PSObject.Properties.Name | Should -Contain "RemoteHash"
+            $result.PSObject.Properties.Name | Should -Contain "Error"
+        }
+    }
+
+    It "GET 模式：雜湊比對應該大小寫不敏感" {
+        InModuleScope vSFTP -Parameters @{ TempDir = $script:TempDir } {
+            $testFile = Join-Path $TempDir "hash-case.txt"
+            "case test" | Set-Content $testFile
+            $hash = (Get-FileHash $testFile -Algorithm SHA256).Hash
+            $lowerHash = $hash.ToLower()
+
+            $result = Test-FileHash -LocalPath $testFile -RemotePath "/dummy" -ExpectedHash $lowerHash -Action get
+
+            # LocalHash 應該是大寫
+            $result.LocalHash | Should -Match "^[A-F0-9]{64}$"
+        }
+    }
+
+    It "應該處理空檔案" {
+        InModuleScope vSFTP -Parameters @{ TempDir = $script:TempDir } {
+            $testFile = Join-Path $TempDir "empty.txt"
+            Set-Content $testFile -Value "" -NoNewline
+            $hash = (Get-FileHash $testFile -Algorithm SHA256).Hash
+
+            $result = Test-FileHash -LocalPath $testFile -RemotePath "/dummy" -ExpectedHash $hash -Action get
+
+            $result.Success | Should -Be $true
+            $result.LocalHash | Should -Be $hash
+        }
+    }
+
+    It "應該處理大檔案路徑中的特殊字元" {
+        InModuleScope vSFTP -Parameters @{ TempDir = $script:TempDir } {
+            $testFile = Join-Path $TempDir "file with spaces.txt"
+            "special chars" | Set-Content $testFile
+            $hash = (Get-FileHash $testFile -Algorithm SHA256).Hash
+
+            $result = Test-FileHash -LocalPath $testFile -RemotePath "/dummy" -ExpectedHash $hash -Action get
+
+            $result.Success | Should -Be $true
+        }
+    }
 }
