@@ -1,4 +1,4 @@
-function Get-RemoteOS {
+﻿function Get-RemoteOS {
     <#
     .SYNOPSIS
         透過 SSH 偵測遠端作業系統。
@@ -10,9 +10,9 @@ function Get-RemoteOS {
         [Parameter(Mandatory)]
         [int]$SessionId
     )
-    
+
     $result = Invoke-SSHCommand -SessionId $SessionId -Command "uname -s" -TimeOut 30
-    
+
     if ($result.ExitStatus -eq 0) {
         $os = $result.Output.Trim()
         switch -Regex ($os) {

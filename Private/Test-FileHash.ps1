@@ -1,4 +1,4 @@
-function Test-FileHash {
+﻿function Test-FileHash {
     <#
     .SYNOPSIS
         驗證檔案的雜湊是否符合預期。
@@ -19,34 +19,34 @@ function Test-FileHash {
     param(
         [Parameter(Mandatory)]
         [string]$LocalPath,
-        
+
         [Parameter(Mandatory)]
         [string]$RemotePath,
-        
+
         [int]$SessionId,
         [string]$RemoteOS,
         [string]$ExpectedHash,
-        
+
         [Parameter(Mandatory)]
         [ValidateSet('put', 'get')]
         [string]$Action
     )
-    
+
     $result = [PSCustomObject]@{
         Success    = $false
         LocalHash  = $null
         RemoteHash = $null
         Error      = $null
     }
-    
+
     try {
         if (-not (Test-Path $LocalPath)) {
             $result.Error = "Local file not found: $LocalPath"
             return $result
         }
-        
+
         $result.LocalHash = (Get-FileHash -Path $LocalPath -Algorithm SHA256).Hash.ToUpper()
-        
+
         if ($Action -eq 'put') {
             $result.RemoteHash = Get-RemoteFileHash -SessionId $SessionId -RemotePath $RemotePath -RemoteOS $RemoteOS
             $result.Success = ($result.LocalHash -eq $result.RemoteHash)
@@ -61,6 +61,6 @@ function Test-FileHash {
     } catch {
         $result.Error = $_.Exception.Message
     }
-    
+
     return $result
 }

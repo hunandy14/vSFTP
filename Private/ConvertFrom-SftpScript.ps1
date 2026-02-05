@@ -1,4 +1,4 @@
-function Parse-SftpScript {
+﻿function ConvertFrom-SftpScript {
     <#
     .SYNOPSIS
         解析 SFTP 批次腳本並提取檔案傳輸操作。
@@ -15,36 +15,36 @@ function Parse-SftpScript {
     param(
         [Parameter(Mandatory)]
         [string]$ScriptFile,
-        
+
         [string]$LocalBase = (Get-Location).Path,
-        
+
         [string]$RemoteBase = "/"
     )
-    
+
     if (-not (Test-Path $ScriptFile)) {
         throw "Script file not found: $ScriptFile"
     }
-    
+
     $localDir = $LocalBase
     $remoteDir = $RemoteBase
     $operations = @()
     $lineNum = 0
-    
+
     foreach ($line in Get-Content $ScriptFile) {
         $lineNum++
         $line = $line.Trim()
-        
+
         # 跳過空行和註解
         if ([string]::IsNullOrWhiteSpace($line) -or $line.StartsWith('#')) {
             continue
         }
-        
+
         # 解析指令和參數
         $parts = $line -split '\s+', 3
         $cmd = $parts[0].ToLower()
         $arg1 = if ($parts.Count -gt 1) { $parts[1] } else { $null }
         $arg2 = if ($parts.Count -gt 2) { $parts[2] } else { $null }
-        
+
         switch ($cmd) {
             'lcd' {
                 if ($arg1) {
@@ -57,7 +57,7 @@ function Parse-SftpScript {
                     Write-Verbose "Line $lineNum : lcd -> $localDir"
                 }
             }
-            
+
             'cd' {
                 if ($arg1) {
                     if ($arg1.StartsWith('/')) {
@@ -81,28 +81,28 @@ function Parse-SftpScript {
                     Write-Verbose "Line $lineNum : cd -> $remoteDir"
                 }
             }
-            
+
             'put' {
                 if (-not $arg1) {
                     Write-Warning "Line $lineNum : put command missing source"
                     continue
                 }
-                
+
                 # 解析本地路徑
                 $localPattern = if ([System.IO.Path]::IsPathRooted($arg1)) {
                     $arg1
                 } else {
                     Join-Path $localDir $arg1
                 }
-                
+
                 # 展開萬用字元
                 $localFiles = @(Get-ChildItem -Path $localPattern -File -ErrorAction SilentlyContinue)
-                
+
                 if ($localFiles.Count -eq 0) {
                     Write-Warning "Line $lineNum : No files match pattern: $localPattern"
                     continue
                 }
-                
+
                 foreach ($localFile in $localFiles) {
                     # 決定遠端路徑
                     $remotePath = if ($arg2) {
@@ -118,7 +118,7 @@ function Parse-SftpScript {
                     } else {
                         "$remoteDir/$($localFile.Name)" -replace '//+', '/'
                     }
-                    
+
                     $operations += [PSCustomObject]@{
                         Action     = 'put'
                         LocalPath  = $localFile.FullName
@@ -128,20 +128,20 @@ function Parse-SftpScript {
                     Write-Verbose "Line $lineNum : put $($localFile.FullName) -> $remotePath"
                 }
             }
-            
+
             'get' {
                 if (-not $arg1) {
                     Write-Warning "Line $lineNum : get command missing source"
                     continue
                 }
-                
+
                 # 解析遠端路徑
                 $remotePath = if ($arg1.StartsWith('/')) {
                     $arg1
                 } else {
                     "$remoteDir/$arg1" -replace '//+', '/'
                 }
-                
+
                 # 決定本地路徑
                 $remoteFileName = Split-Path $remotePath -Leaf
                 $localPath = if ($arg2) {
@@ -158,7 +158,7 @@ function Parse-SftpScript {
                     Join-Path $localDir $remoteFileName
                 }
                 $localPath = [System.IO.Path]::GetFullPath($localPath)
-                
+
                 # 注意：遠端萬用字元無法在本地展開
                 # 我們將它們視為單一項目；驗證時會處理多個檔案
                 $operations += [PSCustomObject]@{
@@ -170,12 +170,12 @@ function Parse-SftpScript {
                 }
                 Write-Verbose "Line $lineNum : get $remotePath -> $localPath"
             }
-            
+
             default {
                 Write-Verbose "Line $lineNum : Untracked command: $cmd (passed to sftp.exe)"
             }
         }
     }
-    
+
     return $operations
 }
