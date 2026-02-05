@@ -22,13 +22,13 @@ Invoke-Pester ./test -Output Detailed
 
 ```powershell
 # 啟動測試伺服器
-./dev.ps1
+./docker-up.ps1
 
 # 執行整合測試
 Invoke-Pester ./test -Tag "Integration"
 
 # 關閉測試伺服器
-./dev.ps1 -Down
+./docker-up.ps1 -Down
 ```
 
 ## 測試檔案
