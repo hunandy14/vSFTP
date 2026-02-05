@@ -115,7 +115,7 @@ Describe "Expand-GetOperation" -Tag "Integration" {
                 HasWildcard = $true
             })
 
-            $result = Expand-GetOperation -Operations $ops -SessionId $SessionId
+            $result = Expand-GetOperation -Operations $ops -SessionId $SessionId -RemoteOS Linux
 
             $result.Count | Should -BeGreaterOrEqual 1
             $result | ForEach-Object { $_.HasWildcard | Should -Be $false }
@@ -137,7 +137,7 @@ Describe "Expand-GetOperation" -Tag "Integration" {
                 HasWildcard = $true
             })
 
-            { Expand-GetOperation -Operations $ops -SessionId $SessionId } | Should -Throw "*dangerous*"
+            { Expand-GetOperation -Operations $ops -SessionId $SessionId -RemoteOS Linux } | Should -Throw "*dangerous*"
         }
     }
 
@@ -156,7 +156,7 @@ Describe "Expand-GetOperation" -Tag "Integration" {
                 HasWildcard = $true
             })
 
-            { Expand-GetOperation -Operations $ops -SessionId $SessionId } | Should -Throw "*dangerous*"
+            { Expand-GetOperation -Operations $ops -SessionId $SessionId -RemoteOS Linux } | Should -Throw "*dangerous*"
         }
     }
 
@@ -175,7 +175,7 @@ Describe "Expand-GetOperation" -Tag "Integration" {
                 HasWildcard = $true
             })
 
-            { Expand-GetOperation -Operations $ops -SessionId $SessionId } | Should -Throw "*dangerous*"
+            { Expand-GetOperation -Operations $ops -SessionId $SessionId -RemoteOS Linux } | Should -Throw "*dangerous*"
         }
     }
 
@@ -194,7 +194,7 @@ Describe "Expand-GetOperation" -Tag "Integration" {
                 HasWildcard = $true
             })
 
-            { Expand-GetOperation -Operations $ops -SessionId $SessionId } | Should -Throw "*dangerous*"
+            { Expand-GetOperation -Operations $ops -SessionId $SessionId -RemoteOS Linux } | Should -Throw "*dangerous*"
         }
     }
 
@@ -215,7 +215,7 @@ Describe "Expand-GetOperation" -Tag "Integration" {
                 }
             )
 
-            $result = Expand-GetOperation -Operations $ops -SessionId $SessionId
+            $result = Expand-GetOperation -Operations $ops -SessionId $SessionId -RemoteOS Linux
 
             $result.Count | Should -Be 1
             $result[0].RemotePath | Should -Be '/home/testuser/upload/remote-file.txt'

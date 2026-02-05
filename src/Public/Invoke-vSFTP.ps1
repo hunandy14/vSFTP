@@ -100,16 +100,21 @@
             }
 
             # 偵測 OS
+            # 偵測遠端 OS：先嘗試 uname（Linux/macOS），失敗則嘗試 PowerShell（Windows）
             $uname = Invoke-SSHCommand -SessionId $sshSession.SessionId -Command "uname -s" -TimeOut 30
-            if ($uname.ExitStatus -ne 0) {
-                Write-Host "✗ Failed to detect remote OS (uname failed)" -ForegroundColor Red
-                $exitCode = $EXIT_CONNECTION_FAILED; return
-            }
-            $remoteOS = switch -Regex ($uname.Output.Trim()) {
-                'Linux'  { 'Linux' }
-                'Darwin' { 'macOS' }
-                default  { 
-                    Write-Host "✗ Unsupported remote OS: $($uname.Output.Trim())" -ForegroundColor Red
+            if ($uname.ExitStatus -eq 0) {
+                $remoteOS = switch -Regex ($uname.Output.Trim()) {
+                    'Linux'  { 'Linux' }
+                    'Darwin' { 'macOS' }
+                    default  { 'Linux' }  # 其他 Unix-like 系統當作 Linux
+                }
+            } else {
+                # uname 失敗，嘗試 PowerShell 偵測 Windows
+                $psTest = Invoke-SSHCommand -SessionId $sshSession.SessionId -Command 'powershell -NoProfile -Command "Write-Output Windows"' -TimeOut 30
+                if ($psTest.ExitStatus -eq 0 -and $psTest.Output.Trim() -eq 'Windows') {
+                    $remoteOS = 'Windows'
+                } else {
+                    Write-Host "✗ Failed to detect remote OS" -ForegroundColor Red
                     $exitCode = $EXIT_CONNECTION_FAILED; return
                 }
             }
@@ -117,7 +122,7 @@
 
             # 展開 GET 萬用字元並預取雜湊
             if ($getOps.Count -gt 0) {
-                $getOps = Expand-GetOperation -Operations $getOps -SessionId $sshSession.SessionId
+                $getOps = Expand-GetOperation -Operations $getOps -SessionId $sshSession.SessionId -RemoteOS $remoteOS
                 Write-Host "► Pre-fetching GET hashes..." -ForegroundColor Yellow
                 foreach ($op in $getOps) {
                     try {
