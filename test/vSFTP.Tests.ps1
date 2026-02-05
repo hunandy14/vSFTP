@@ -16,20 +16,18 @@ Describe "vSFTP 模組" {
 }
 
 Describe "Get-RemoteFileHash" -Tag "Integration" {
-    BeforeAll {
+    It "應該取得 Linux 檔案的 SHA256 雜湊" {
         # 檢查測試伺服器是否運行中
-        $script:TestServerRunning = $false
-        try {
-            $container = docker ps --filter "name=vsftp-test-server" --format "{{.Names}}" 2>$null
-            $script:TestServerRunning = ($container -eq "vsftp-test-server")
-        } catch { }
-    }
+        $container = docker ps --filter "name=vsftp-test-server" --format "{{.Names}}" 2>$null
+        if ($container -ne "vsftp-test-server") {
+            Set-ItResult -Skipped -Because "測試伺服器未運行（執行 ./docker-up.ps1）"
+            return
+        }
 
-    It "應該取得 Linux 檔案的 SHA256 雜湊" -Skip:(-not $script:TestServerRunning) {
         InModuleScope vSFTP {
             $session = New-SSHSession -ComputerName localhost -Port 2222 `
                 -Credential (New-Object PSCredential("testuser", (New-Object SecureString))) `
-                -KeyFile "secrets/id_ed25519" -AcceptKey -Force
+                -KeyFile "secrets/id_ed25519" -AcceptKey -KnownHost (New-SSHMemoryKnownHost)
 
             try {
                 $hash = Get-RemoteFileHash -SessionId $session.SessionId -RemotePath "/home/testuser/upload/remote-file.txt" -RemoteOS "Linux"
