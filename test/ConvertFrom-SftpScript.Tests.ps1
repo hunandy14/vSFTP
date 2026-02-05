@@ -368,9 +368,42 @@ rm oldfile.txt
     }
 
     Context "特殊字元處理" {
-        It "應該處理含空格的檔名" -Tag "TODO" {
-            # TODO: 需要修復解析器支援引號內的空格
-            Set-ItResult -Skipped -Because "解析器尚未支援引號處理"
+        It "應該處理含空格的檔名（雙引號）" {
+            InModuleScope vSFTP -Parameters @{ TempDir = $TempDir } {
+                "test" | Set-Content (Join-Path $TempDir "file with spaces.txt")
+
+                $script = @"
+lcd $TempDir
+cd /remote
+put "file with spaces.txt"
+"@
+                $scriptFile = Join-Path $TempDir "test-spaces.sftp"
+                $script | Set-Content $scriptFile
+
+                $result = ConvertFrom-SftpScript -ScriptFile $scriptFile
+
+                $result | Should -HaveCount 1
+                $result[0].LocalPath | Should -BeLike "*file with spaces.txt"
+            }
+        }
+
+        It "應該處理含空格的檔名（單引號）" {
+            InModuleScope vSFTP -Parameters @{ TempDir = $TempDir } {
+                "test" | Set-Content (Join-Path $TempDir "another file.txt")
+
+                $script = @"
+lcd $TempDir
+cd /remote
+put 'another file.txt'
+"@
+                $scriptFile = Join-Path $TempDir "test-single-quote.sftp"
+                $script | Set-Content $scriptFile
+
+                $result = ConvertFrom-SftpScript -ScriptFile $scriptFile
+
+                $result | Should -HaveCount 1
+                $result[0].LocalPath | Should -BeLike "*another file.txt"
+            }
         }
     }
 }

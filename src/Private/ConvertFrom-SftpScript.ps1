@@ -39,11 +39,37 @@
             continue
         }
 
-        # 解析指令和參數
-        $parts = $line -split '\s+', 3
-        $cmd = $parts[0].ToLower()
-        $arg1 = if ($parts.Count -gt 1) { $parts[1] } else { $null }
-        $arg2 = if ($parts.Count -gt 2) { $parts[2] } else { $null }
+        # 解析指令和參數（支援引號內的空格）
+        $tokens = @()
+        $current = ""
+        $inQuote = $false
+        $quoteChar = $null
+        
+        foreach ($char in $line.ToCharArray()) {
+            if ($inQuote) {
+                if ($char -eq $quoteChar) {
+                    $inQuote = $false
+                    $quoteChar = $null
+                } else {
+                    $current += $char
+                }
+            } elseif ($char -eq '"' -or $char -eq "'") {
+                $inQuote = $true
+                $quoteChar = $char
+            } elseif ($char -match '\s') {
+                if ($current) {
+                    $tokens += $current
+                    $current = ""
+                }
+            } else {
+                $current += $char
+            }
+        }
+        if ($current) { $tokens += $current }
+        
+        $cmd = if ($tokens.Count -gt 0) { $tokens[0].ToLower() } else { continue }
+        $arg1 = if ($tokens.Count -gt 1) { $tokens[1] } else { $null }
+        $arg2 = if ($tokens.Count -gt 2) { $tokens[2] } else { $null }
 
         switch ($cmd) {
             'lcd' {
