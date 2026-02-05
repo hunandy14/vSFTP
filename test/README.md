@@ -13,7 +13,7 @@ $env:SFTP_USER = "testuser"
 $env:SFTP_KEYFILE = "test/test_key"
 
 # 執行測試
-Import-Module ./src/vSFTP.psd1
+Import-Module ./src/vSFTP.psd1 -Force
 Invoke-vSFTP -ScriptFile test/scripts/test-upload.sftp
 
 # 關閉測試伺服器

@@ -28,7 +28,7 @@ git clone https://github.com/yourname/vsftp.git
 cd vsftp
 
 # 匯入模組
-Import-Module ./src/vSFTP.psd1
+Import-Module ./src/vSFTP.psd1 -Force
 ```
 
 ## 使用方式
