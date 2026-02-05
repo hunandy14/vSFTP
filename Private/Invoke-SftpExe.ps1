@@ -27,13 +27,17 @@ function Invoke-SftpExe {
         [Parameter(Mandatory)]
         [string]$KeyFile,
         
-        [int]$Port = 22
+        [int]$Port = 22,
+        
+        [switch]$SkipHostKeyCheck
     )
+    
+    $hostKeyOption = if ($SkipHostKeyCheck) { "no" } else { "accept-new" }
     
     $sftpArgs = @(
         "-b", $ScriptFile,
         "-P", $Port,
-        "-o", "StrictHostKeyChecking=accept-new",
+        "-o", "StrictHostKeyChecking=$hostKeyOption",
         "-o", "BatchMode=yes",
         "-i", $KeyFile
     )

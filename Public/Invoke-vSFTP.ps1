@@ -28,7 +28,9 @@ function Invoke-vSFTP {
         
         [switch]$ContinueOnError,
         
-        [switch]$DryRun
+        [switch]$DryRun,
+        
+        [switch]$SkipHostKeyCheck
     )
     
     # Exit codes
@@ -127,7 +129,10 @@ function Invoke-vSFTP {
                 KeyFile      = $sftpKeyFile
                 ConnectionTimeout = $CONNECTION_TIMEOUT
                 AcceptKey    = $true
-                Force        = $true
+            }
+            
+            if ($SkipHostKeyCheck) {
+                $sshParams['Force'] = $true
             }
             
             $sshSession = New-SSHSession @sshParams
@@ -150,6 +155,49 @@ function Invoke-vSFTP {
     }
     #endregion
     
+    #region Expand remote wildcards for GET operations
+    if ($getOps.Count -gt 0) {
+        $wildcardOps = @($getOps | Where-Object { $_.HasWildcard })
+        
+        if ($wildcardOps.Count -gt 0 -and $sshSession) {
+            Write-Host "► Expanding remote wildcards..." -ForegroundColor Yellow
+            
+            $expandedOps = @()
+            foreach ($op in $getOps) {
+                if ($op.HasWildcard) {
+                    $remoteFiles = Expand-RemoteWildcard -SessionId $sshSession.SessionId -RemotePath $op.RemotePath
+                    
+                    if ($remoteFiles.Count -eq 0) {
+                        Write-Host "  ⚠ No files match: $($op.RemotePath)" -ForegroundColor Yellow
+                        continue
+                    }
+                    
+                    foreach ($remoteFile in $remoteFiles) {
+                        $fileName = Split-Path $remoteFile -Leaf
+                        $localDir = Split-Path $op.LocalPath -Parent
+                        $localPath = Join-Path $localDir $fileName
+                        
+                        $expandedOps += [PSCustomObject]@{
+                            Action      = 'get'
+                            LocalPath   = $localPath
+                            RemotePath  = $remoteFile
+                            Line        = $op.Line
+                            HasWildcard = $false
+                        }
+                        Write-Host "  $($op.RemotePath) → $remoteFile" -ForegroundColor Gray
+                    }
+                } else {
+                    $expandedOps += $op
+                }
+            }
+            
+            $getOps = $expandedOps
+            Write-Host "  Expanded to $($getOps.Count) files" -ForegroundColor Gray
+            Write-Host ""
+        }
+    }
+    #endregion
+    
     #region Pre-transfer: Get remote hashes for GET operations
     $remoteHashes = @{}
     
@@ -157,10 +205,6 @@ function Invoke-vSFTP {
         Write-Host "► Getting remote hashes for GET operations..." -ForegroundColor Yellow
         
         foreach ($op in $getOps) {
-            if ($op.HasWildcard) {
-                Write-Host "  ⚠ Skipping wildcard pattern: $($op.RemotePath)" -ForegroundColor Yellow
-                continue
-            }
             
             try {
                 $hash = Get-RemoteFileHash -SessionId $sshSession.SessionId -RemotePath $op.RemotePath -RemoteOS $remoteOS
@@ -183,7 +227,7 @@ function Invoke-vSFTP {
     Write-Host ""
     
     try {
-        $sftpResult = Invoke-SftpExe -ScriptFile $ScriptFile -Host $sftpHost -User $sftpUser -Port $sftpPort -KeyFile $sftpKeyFile -Verbose:$VerbosePreference
+        $sftpResult = Invoke-SftpExe -ScriptFile $ScriptFile -Host $sftpHost -User $sftpUser -Port $sftpPort -KeyFile $sftpKeyFile -SkipHostKeyCheck:$SkipHostKeyCheck -Verbose:$VerbosePreference
         
         if ($sftpResult.ExitCode -ne 0) {
             Write-Host ""
@@ -247,11 +291,6 @@ function Invoke-vSFTP {
         
         # Verify GET operations
         foreach ($op in $getOps) {
-            if ($op.HasWildcard) {
-                Write-Host "  ⚠ $($op.LocalPath) - Skipped (wildcard)" -ForegroundColor Yellow
-                continue
-            }
-            
             try {
                 $localHash = Get-LocalFileHash -Path $op.LocalPath
                 $expectedHash = $remoteHashes[$op.RemotePath]
