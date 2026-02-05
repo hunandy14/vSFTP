@@ -1,0 +1,4 @@
+# Test: Download with wildcard
+lcd test/local
+cd /home/testuser/upload
+get *.log
