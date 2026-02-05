@@ -1,4 +1,4 @@
-function Invoke-SftpExe {
+﻿function Invoke-SftpExe {
     <#
     .SYNOPSIS
         使用批次腳本執行 sftp.exe。

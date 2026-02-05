@@ -1,4 +1,4 @@
-function Invoke-vSFTP {
+﻿function Invoke-vSFTP {
     <#
     .SYNOPSIS
         執行帶有 SHA256 雜湊驗證的 SFTP 批次腳本。
