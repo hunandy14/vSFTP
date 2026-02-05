@@ -8,10 +8,12 @@ function Invoke-SftpExe {
         Remote host.
     .PARAMETER User
         Username.
-    .PARAMETER Port
-        SSH port.
     .PARAMETER KeyFile
         Private key file path (required).
+    .PARAMETER Port
+        SSH port.
+    .PARAMETER SkipHostKeyCheck
+        Skip host key verification.
     #>
     [CmdletBinding()]
     param(
@@ -46,7 +48,7 @@ function Invoke-SftpExe {
     
     Write-Verbose "Executing: sftp $($sftpArgs -join ' ')"
     
-    # Execute sftp
+    # 執行 sftp
     $pinfo = New-Object System.Diagnostics.ProcessStartInfo
     $pinfo.FileName = "sftp"
     $pinfo.Arguments = $sftpArgs -join ' '
@@ -58,13 +60,13 @@ function Invoke-SftpExe {
     $process = New-Object System.Diagnostics.Process
     $process.StartInfo = $pinfo
     
-    # Capture output
+    # 擷取輸出
     $stdout = New-Object System.Text.StringBuilder
     $stderr = New-Object System.Text.StringBuilder
     
     $process.Start() | Out-Null
     
-    # Read output asynchronously
+    # 非同步讀取輸出
     while (-not $process.HasExited) {
         $line = $process.StandardOutput.ReadLine()
         if ($line) {
@@ -74,7 +76,7 @@ function Invoke-SftpExe {
         Start-Sleep -Milliseconds 100
     }
     
-    # Read remaining output
+    # 讀取剩餘輸出
     $remaining = $process.StandardOutput.ReadToEnd()
     if ($remaining) {
         [void]$stdout.Append($remaining)

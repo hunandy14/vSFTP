@@ -16,7 +16,7 @@ function Expand-RemoteWildcard {
         [string]$RemotePath
     )
     
-    # Use ls -1 to list files matching pattern (one per line)
+    # 使用 ls -1 列出符合模式的檔案（每行一個）
     $command = "ls -1d $RemotePath 2>/dev/null"
     
     $result = Invoke-SSHCommand -SessionId $SessionId -Command $command -TimeOut 60
@@ -26,7 +26,7 @@ function Expand-RemoteWildcard {
         return @()
     }
     
-    # Split output into individual file paths
+    # 將輸出分割成個別檔案路徑
     $files = $result.Output -split "`n" | 
              ForEach-Object { $_.Trim() } | 
              Where-Object { $_ -and $_ -notmatch '^\s*$' }

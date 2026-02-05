@@ -34,12 +34,12 @@ function Parse-SftpScript {
         $lineNum++
         $line = $line.Trim()
         
-        # Skip empty lines and comments
+        # 跳過空行和註解
         if ([string]::IsNullOrWhiteSpace($line) -or $line.StartsWith('#')) {
             continue
         }
         
-        # Parse command and arguments
+        # 解析指令和參數
         $parts = $line -split '\s+', 3
         $cmd = $parts[0].ToLower()
         $arg1 = if ($parts.Count -gt 1) { $parts[1] } else { $null }
@@ -65,7 +65,7 @@ function Parse-SftpScript {
                     } else {
                         $remoteDir = "$remoteDir/$arg1" -replace '//+', '/'
                     }
-                    # Normalize path (remove . and ..)
+                    # 正規化路徑（移除 . 和 ..）
                     $remoteParts = $remoteDir -split '/' | Where-Object { $_ -and $_ -ne '.' }
                     $normalized = @()
                     foreach ($part in $remoteParts) {
@@ -88,14 +88,14 @@ function Parse-SftpScript {
                     continue
                 }
                 
-                # Resolve local path
+                # 解析本地路徑
                 $localPattern = if ([System.IO.Path]::IsPathRooted($arg1)) {
                     $arg1
                 } else {
                     Join-Path $localDir $arg1
                 }
                 
-                # Expand wildcards
+                # 展開萬用字元
                 $localFiles = @(Get-ChildItem -Path $localPattern -File -ErrorAction SilentlyContinue)
                 
                 if ($localFiles.Count -eq 0) {
@@ -104,7 +104,7 @@ function Parse-SftpScript {
                 }
                 
                 foreach ($localFile in $localFiles) {
-                    # Determine remote path
+                    # 決定遠端路徑
                     $remotePath = if ($arg2) {
                         if ($arg2.StartsWith('/')) {
                             if ($arg2.EndsWith('/')) {
@@ -135,14 +135,14 @@ function Parse-SftpScript {
                     continue
                 }
                 
-                # Resolve remote path
+                # 解析遠端路徑
                 $remotePath = if ($arg1.StartsWith('/')) {
                     $arg1
                 } else {
                     "$remoteDir/$arg1" -replace '//+', '/'
                 }
                 
-                # Determine local path
+                # 決定本地路徑
                 $remoteFileName = Split-Path $remotePath -Leaf
                 $localPath = if ($arg2) {
                     if ([System.IO.Path]::IsPathRooted($arg2)) {
@@ -159,8 +159,8 @@ function Parse-SftpScript {
                 }
                 $localPath = [System.IO.Path]::GetFullPath($localPath)
                 
-                # Note: Remote wildcards cannot be expanded locally
-                # We treat them as single entries; verification will handle multiple files
+                # 注意：遠端萬用字元無法在本地展開
+                # 我們將它們視為單一項目；驗證時會處理多個檔案
                 $operations += [PSCustomObject]@{
                     Action     = 'get'
                     LocalPath  = $localPath

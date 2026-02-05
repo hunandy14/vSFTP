@@ -22,6 +22,7 @@ function Get-RemoteFileHash {
         [string]$RemoteOS
     )
     
+    # 根據作業系統選擇雜湊指令
     $command = switch ($RemoteOS) {
         'Linux' {
             "sha256sum '$RemotePath' | cut -d' ' -f1"
@@ -42,7 +43,7 @@ function Get-RemoteFileHash {
     
     $hash = $result.Output.Trim().ToUpper()
     
-    # Validate hash format (64 hex characters)
+    # 驗證雜湊格式（64 個十六進位字元）
     if ($hash -notmatch '^[A-F0-9]{64}$') {
         throw "Invalid hash returned for '$RemotePath': $hash"
     }

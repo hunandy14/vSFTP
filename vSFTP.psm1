@@ -1,7 +1,7 @@
 #Requires -Version 7.0
 #Requires -Modules Posh-SSH
 
-# Import private functions
+# 匯入私有函數
 $Private = @(Get-ChildItem -Path "$PSScriptRoot/Private/*.ps1" -ErrorAction SilentlyContinue)
 foreach ($file in $Private) {
     try {
@@ -11,7 +11,7 @@ foreach ($file in $Private) {
     }
 }
 
-# Import public functions
+# 匯入公開函數
 $Public = @(Get-ChildItem -Path "$PSScriptRoot/Public/*.ps1" -ErrorAction SilentlyContinue)
 foreach ($file in $Public) {
     try {
@@ -21,5 +21,5 @@ foreach ($file in $Public) {
     }
 }
 
-# Export public functions
+# 匯出公開函數
 Export-ModuleMember -Function $Public.BaseName

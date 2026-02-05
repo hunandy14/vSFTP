@@ -13,6 +13,8 @@ function Invoke-vSFTP {
         Continue execution even if a file fails verification.
     .PARAMETER DryRun
         Parse script and show what would be done without executing.
+    .PARAMETER SkipHostKeyCheck
+        Skip SSH host key verification.
     .EXAMPLE
         $env:SFTP_HOST = "example.com"
         $env:SFTP_USER = "user"
@@ -33,17 +35,17 @@ function Invoke-vSFTP {
         [switch]$SkipHostKeyCheck
     )
     
-    # Exit codes
+    # 結束代碼
     $EXIT_SUCCESS = 0
     $EXIT_VERIFY_FAILED = 1
     $EXIT_TRANSFER_FAILED = 2
     $EXIT_CONNECTION_FAILED = 3
     
-    # Timeouts
+    # 逾時設定
     $CONNECTION_TIMEOUT = 30
     $COMMAND_TIMEOUT = 300
     
-    #region Validate Environment
+    #region 驗證環境變數
     Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
     Write-Host "  vSFTP - SFTP with Hash Verification" -ForegroundColor Cyan
     Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
@@ -72,7 +74,7 @@ function Invoke-vSFTP {
     Write-Host ""
     #endregion
     
-    #region Parse Script
+    #region 解析腳本
     Write-Host "► Parsing script: $ScriptFile" -ForegroundColor Yellow
     
     if (-not (Test-Path $ScriptFile)) {
@@ -100,7 +102,7 @@ function Invoke-vSFTP {
     }
     #endregion
     
-    #region Dry Run
+    #region 試執行模式
     if ($DryRun) {
         Write-Host "► Dry Run - Operations that would be performed:" -ForegroundColor Yellow
         Write-Host ""
@@ -114,7 +116,7 @@ function Invoke-vSFTP {
     }
     #endregion
     
-    #region Connect SSH (for hash verification)
+    #region 建立 SSH 連線（用於雜湊驗證）
     $sshSession = $null
     $remoteOS = $null
     
@@ -143,7 +145,7 @@ function Invoke-vSFTP {
             
             Write-Host "  Connected (Session $($sshSession.SessionId))" -ForegroundColor Gray
             
-            # Detect remote OS
+            # 偵測遠端作業系統
             $remoteOS = Get-RemoteOS -SessionId $sshSession.SessionId
             Write-Host "  Remote OS: $remoteOS" -ForegroundColor Gray
             Write-Host ""
@@ -155,7 +157,7 @@ function Invoke-vSFTP {
     }
     #endregion
     
-    #region Expand remote wildcards for GET operations
+    #region 展開遠端萬用字元（GET 操作）
     if ($getOps.Count -gt 0) {
         $wildcardOps = @($getOps | Where-Object { $_.HasWildcard })
         
@@ -198,14 +200,13 @@ function Invoke-vSFTP {
     }
     #endregion
     
-    #region Pre-transfer: Get remote hashes for GET operations
+    #region 傳輸前：取得 GET 操作的遠端雜湊
     $remoteHashes = @{}
     
     if (-not $NoVerify -and $getOps.Count -gt 0) {
         Write-Host "► Getting remote hashes for GET operations..." -ForegroundColor Yellow
         
         foreach ($op in $getOps) {
-            
             try {
                 $hash = Get-RemoteFileHash -SessionId $sshSession.SessionId -RemotePath $op.RemotePath -RemoteOS $remoteOS
                 $remoteHashes[$op.RemotePath] = $hash
@@ -222,7 +223,7 @@ function Invoke-vSFTP {
     }
     #endregion
     
-    #region Execute Transfer
+    #region 執行傳輸
     Write-Host "► Executing SFTP transfer..." -ForegroundColor Yellow
     Write-Host ""
     
@@ -248,7 +249,7 @@ function Invoke-vSFTP {
     }
     #endregion
     
-    #region Hash Verification
+    #region 雜湊驗證
     if (-not $NoVerify) {
         Write-Host "► Verifying file hashes..." -ForegroundColor Yellow
         Write-Host ""
@@ -256,7 +257,7 @@ function Invoke-vSFTP {
         $passed = 0
         $failed = 0
         
-        # Verify PUT operations
+        # 驗證 PUT 操作
         foreach ($op in $putOps) {
             try {
                 $localHash = Get-LocalFileHash -Path $op.LocalPath
@@ -289,7 +290,7 @@ function Invoke-vSFTP {
             }
         }
         
-        # Verify GET operations
+        # 驗證 GET 操作
         foreach ($op in $getOps) {
             try {
                 $localHash = Get-LocalFileHash -Path $op.LocalPath
@@ -332,7 +333,7 @@ function Invoke-vSFTP {
         Write-Host "  Summary: $passed passed, $failed failed" -ForegroundColor $(if ($failed -eq 0) { 'Green' } else { 'Red' })
         Write-Host "───────────────────────────────────────────────────────────────" -ForegroundColor Cyan
         
-        # Cleanup
+        # 清理
         if ($sshSession) {
             Remove-SSHSession -SessionId $sshSession.SessionId | Out-Null
         }

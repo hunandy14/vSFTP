@@ -18,10 +18,10 @@ function Get-RemoteOS {
         switch -Regex ($os) {
             'Linux'  { return 'Linux' }
             'Darwin' { return 'macOS' }
-            default  { return 'Linux' }  # Assume Linux-like for other Unix
+            default  { return 'Linux' }  # 其他 Unix 系統假設為 Linux
         }
     } else {
-        # uname failed, likely Windows
+        # uname 失敗，可能是 Windows
         return 'Windows'
     }
 }
