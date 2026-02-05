@@ -74,8 +74,8 @@ function Start-TestServer {
 function Add-HostKey {
     Write-Host "► 註冊 host key（sftp.exe 用）..." -ForegroundColor Yellow
     
-    # 用 ssh-keyscan 取得 host key
-    $hostKeys = ssh-keyscan -p 2222 localhost 2>$null
+    # 用 ssh-keyscan 取得 host key（stderr 有註解，stdout 有 key）
+    $hostKeys = ssh-keyscan -p 2222 localhost 2>&1 | Where-Object { $_ -notmatch '^#' -and $_ -match 'ssh-|ecdsa-' }
     
     if (-not $hostKeys) {
         throw "無法取得 host key"
