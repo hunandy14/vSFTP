@@ -1,39 +1,40 @@
-# vSFTP 測試環境
+# 測試
 
-## 快速開始
+使用 [Pester](https://pester.dev/) 執行測試。
+
+## 執行測試
+
+```powershell
+# 執行所有測試
+Invoke-Pester ./test
+
+# 執行特定測試檔
+Invoke-Pester ./test/vSFTP.Tests.ps1
+Invoke-Pester ./test/ConvertFrom-SftpScript.Tests.ps1
+
+# 詳細輸出
+Invoke-Pester ./test -Output Detailed
+```
+
+## 整合測試
+
+整合測試需要先啟動測試伺服器：
 
 ```powershell
 # 啟動測試伺服器
 ./dev.ps1
 
-# 設定環境變數
-$env:SFTP_HOST = "localhost"
-$env:SFTP_PORT = "2222"
-$env:SFTP_USER = "testuser"
-$env:SFTP_KEYFILE = "secrets/id_ed25519"
-
-# 執行測試
-Import-Module ./src/vSFTP.psd1 -Force
-Invoke-vSFTP -ScriptFile test/scripts/test-upload.sftp
-Invoke-vSFTP -ScriptFile test/scripts/test-download.sftp
-Invoke-vSFTP -ScriptFile test/scripts/test-wildcard.sftp
+# 執行整合測試
+Invoke-Pester ./test -Tag "Integration"
 
 # 關閉測試伺服器
 ./dev.ps1 -Down
 ```
 
-## 測試伺服器資訊
-
-| 設定 | 值 |
-|------|-----|
-| 主機 | localhost |
-| 連接埠 | 2222 |
-| 使用者 | testuser |
-| 認證方式 | SSH 金鑰 (secrets/id_ed25519) |
-| 上傳目錄 | /home/testuser/upload |
-
 ## 測試檔案
 
-- `test/local/` - 上傳測試用的本地檔案
-- `test/remote/` - 掛載為遠端上傳目錄
-- `test/scripts/` - SFTP 測試腳本
+| 檔案 | 說明 |
+|------|------|
+| `vSFTP.Tests.ps1` | 模組功能測試 |
+| `ConvertFrom-SftpScript.Tests.ps1` | SFTP 腳本解析測試 |
+| `scripts/*.sftp` | 手動測試用 SFTP 腳本 |
