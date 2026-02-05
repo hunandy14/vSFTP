@@ -12,29 +12,156 @@ Describe "vSFTP 模組" {
         It "應該匯出 Invoke-vSFTP 函數" {
             Get-Command Invoke-vSFTP -Module vSFTP | Should -Not -BeNullOrEmpty
         }
+
+        It "應該包含所有必要的私有函數" {
+            InModuleScope vSFTP {
+                Get-Command ConvertFrom-SftpScript | Should -Not -BeNullOrEmpty
+                Get-Command Get-RemoteFileHash | Should -Not -BeNullOrEmpty
+                Get-Command Test-FileHash | Should -Not -BeNullOrEmpty
+                Get-Command Expand-GetOperation | Should -Not -BeNullOrEmpty
+                Get-Command Invoke-SftpExe | Should -Not -BeNullOrEmpty
+            }
+        }
     }
 }
 
 Describe "Get-RemoteFileHash" -Tag "Integration" {
-    It "應該取得 Linux 檔案的 SHA256 雜湊" {
-        # 檢查測試伺服器是否運行中
+    BeforeAll {
+        $script:ServerRunning = $false
         $container = docker ps --filter "name=vsftp-test-server" --format "{{.Names}}" 2>$null
-        if ($container -ne "vsftp-test-server") {
-            Set-ItResult -Skipped -Because "測試伺服器未運行（執行 ./docker-up.ps1）"
+        $script:ServerRunning = ($container -eq "vsftp-test-server")
+        
+        if ($script:ServerRunning) {
+            $script:Session = New-SSHSession -ComputerName localhost -Port 2222 `
+                -Credential (New-Object PSCredential("testuser", (New-Object SecureString))) `
+                -KeyFile "secrets/id_ed25519" -AcceptKey -KnownHost (New-SSHMemoryKnownHost)
+        }
+    }
+
+    AfterAll {
+        if ($script:Session) {
+            Remove-SSHSession -SessionId $script:Session.SessionId | Out-Null
+        }
+    }
+
+    It "應該取得 Linux 檔案的 SHA256 雜湊" {
+        if (-not $script:ServerRunning) {
+            Set-ItResult -Skipped -Because "測試伺服器未運行"
             return
         }
 
-        InModuleScope vSFTP {
-            $session = New-SSHSession -ComputerName localhost -Port 2222 `
+        InModuleScope vSFTP -Parameters @{ SessionId = $script:Session.SessionId } {
+            $hash = Get-RemoteFileHash -SessionId $SessionId -RemotePath "/home/testuser/upload/remote-file.txt" -RemoteOS "Linux"
+            $hash | Should -Match "^[A-F0-9]{64}$"
+        }
+    }
+
+    It "應該正確處理 Base64 編碼路徑" {
+        if (-not $script:ServerRunning) {
+            Set-ItResult -Skipped -Because "測試伺服器未運行"
+            return
+        }
+
+        InModuleScope vSFTP -Parameters @{ SessionId = $script:Session.SessionId } {
+            $hash = Get-RemoteFileHash -SessionId $SessionId -RemotePath "/home/testuser/upload/access.log" -RemoteOS "Linux"
+            $hash | Should -Match "^[A-F0-9]{64}$"
+            $hash.Length | Should -Be 64
+        }
+    }
+
+    It "應該在檔案不存在時拋出錯誤" {
+        if (-not $script:ServerRunning) {
+            Set-ItResult -Skipped -Because "測試伺服器未運行"
+            return
+        }
+
+        InModuleScope vSFTP -Parameters @{ SessionId = $script:Session.SessionId } {
+            { Get-RemoteFileHash -SessionId $SessionId -RemotePath "/nonexistent/file.txt" -RemoteOS "Linux" } | Should -Throw
+        }
+    }
+}
+
+Describe "Expand-GetOperation" -Tag "Integration" {
+    BeforeAll {
+        $script:ServerRunning = $false
+        $container = docker ps --filter "name=vsftp-test-server" --format "{{.Names}}" 2>$null
+        $script:ServerRunning = ($container -eq "vsftp-test-server")
+        
+        if ($script:ServerRunning) {
+            $script:Session = New-SSHSession -ComputerName localhost -Port 2222 `
                 -Credential (New-Object PSCredential("testuser", (New-Object SecureString))) `
                 -KeyFile "secrets/id_ed25519" -AcceptKey -KnownHost (New-SSHMemoryKnownHost)
+        }
+    }
 
-            try {
-                $hash = Get-RemoteFileHash -SessionId $session.SessionId -RemotePath "/home/testuser/upload/remote-file.txt" -RemoteOS "Linux"
-                $hash | Should -Match "^[A-F0-9]{64}$"
-            } finally {
-                Remove-SSHSession -SessionId $session.SessionId | Out-Null
-            }
+    AfterAll {
+        if ($script:Session) {
+            Remove-SSHSession -SessionId $script:Session.SessionId | Out-Null
+        }
+    }
+
+    It "應該展開遠端萬用字元" {
+        if (-not $script:ServerRunning) {
+            Set-ItResult -Skipped -Because "測試伺服器未運行"
+            return
+        }
+
+        InModuleScope vSFTP -Parameters @{ SessionId = $script:Session.SessionId } {
+            $ops = @([PSCustomObject]@{
+                Action      = 'get'
+                LocalPath   = '/tmp/*.log'
+                RemotePath  = '/home/testuser/upload/*.log'
+                Line        = 1
+                HasWildcard = $true
+            })
+
+            $result = Expand-GetOperation -Operations $ops -SessionId $SessionId
+
+            $result.Count | Should -BeGreaterOrEqual 1
+            $result | ForEach-Object { $_.HasWildcard | Should -Be $false }
+        }
+    }
+
+    It "應該拒絕含危險字元的模式" {
+        if (-not $script:ServerRunning) {
+            Set-ItResult -Skipped -Because "測試伺服器未運行"
+            return
+        }
+
+        InModuleScope vSFTP -Parameters @{ SessionId = $script:Session.SessionId } {
+            $ops = @([PSCustomObject]@{
+                Action      = 'get'
+                LocalPath   = '/tmp/test'
+                RemotePath  = '/home/testuser/upload/;rm -rf /'
+                Line        = 1
+                HasWildcard = $true
+            })
+
+            { Expand-GetOperation -Operations $ops -SessionId $SessionId } | Should -Throw "*dangerous*"
+        }
+    }
+
+    It "應該保留非萬用字元操作" {
+        if (-not $script:ServerRunning) {
+            Set-ItResult -Skipped -Because "測試伺服器未運行"
+            return
+        }
+
+        InModuleScope vSFTP -Parameters @{ SessionId = $script:Session.SessionId } {
+            $ops = @(
+                [PSCustomObject]@{
+                    Action      = 'get'
+                    LocalPath   = '/tmp/test.txt'
+                    RemotePath  = '/home/testuser/upload/remote-file.txt'
+                    Line        = 1
+                    HasWildcard = $false
+                }
+            )
+
+            $result = Expand-GetOperation -Operations $ops -SessionId $SessionId
+
+            $result.Count | Should -Be 1
+            $result[0].RemotePath | Should -Be '/home/testuser/upload/remote-file.txt'
         }
     }
 }
@@ -85,5 +212,146 @@ Describe "Test-FileHash" {
             $result.Success | Should -Be $false
             $result.Error | Should -Not -BeNullOrEmpty
         }
+    }
+
+    It "應該正確計算本地檔案雜湊" {
+        InModuleScope vSFTP -Parameters @{ TempDir = $TempDir } {
+            $testFile = Join-Path $TempDir "hash-test3.txt"
+            "test content for hash" | Set-Content $testFile
+            $expectedHash = (Get-FileHash $testFile -Algorithm SHA256).Hash
+
+            $result = Test-FileHash -LocalPath $testFile -RemotePath "/dummy" -ExpectedHash $expectedHash -Action get
+
+            $result.LocalHash | Should -Be $expectedHash
+            $result.LocalHash.Length | Should -Be 64
+        }
+    }
+
+    It "GET 模式：沒有預期雜湊時應該回傳錯誤" {
+        InModuleScope vSFTP -Parameters @{ TempDir = $TempDir } {
+            $testFile = Join-Path $TempDir "hash-test4.txt"
+            "test" | Set-Content $testFile
+
+            $result = Test-FileHash -LocalPath $testFile -RemotePath "/dummy" -Action get
+
+            $result.Success | Should -Be $false
+            $result.Error | Should -Match "No pre-transfer hash"
+        }
+    }
+}
+
+Describe "Invoke-vSFTP 環境變數" {
+    It "應該在缺少 SFTP_HOST 時顯示錯誤" {
+        $originalHost = $env:SFTP_HOST
+        $originalUser = $env:SFTP_USER
+        $originalKey = $env:SFTP_KEYFILE
+        
+        try {
+            $env:SFTP_HOST = $null
+            $env:SFTP_USER = "test"
+            $env:SFTP_KEYFILE = "test"
+            
+            # 使用 6>&1 捕獲所有輸出
+            $output = & { Invoke-vSFTP -ScriptFile "test/scripts/test-upload.sftp" } 6>&1 2>&1 | Out-String
+            $output | Should -Match "SFTP_HOST"
+        } finally {
+            $env:SFTP_HOST = $originalHost
+            $env:SFTP_USER = $originalUser
+            $env:SFTP_KEYFILE = $originalKey
+        }
+    }
+
+    It "應該在缺少 SFTP_USER 時顯示錯誤" {
+        $originalHost = $env:SFTP_HOST
+        $originalUser = $env:SFTP_USER
+        $originalKey = $env:SFTP_KEYFILE
+        
+        try {
+            $env:SFTP_HOST = "test"
+            $env:SFTP_USER = $null
+            $env:SFTP_KEYFILE = "test"
+            
+            $output = & { Invoke-vSFTP -ScriptFile "test/scripts/test-upload.sftp" } 6>&1 2>&1 | Out-String
+            $output | Should -Match "SFTP_USER"
+        } finally {
+            $env:SFTP_HOST = $originalHost
+            $env:SFTP_USER = $originalUser
+            $env:SFTP_KEYFILE = $originalKey
+        }
+    }
+
+    It "應該在缺少 SFTP_KEYFILE 時顯示錯誤" {
+        $originalHost = $env:SFTP_HOST
+        $originalUser = $env:SFTP_USER
+        $originalKey = $env:SFTP_KEYFILE
+        
+        try {
+            $env:SFTP_HOST = "test"
+            $env:SFTP_USER = "test"
+            $env:SFTP_KEYFILE = $null
+            
+            $output = & { Invoke-vSFTP -ScriptFile "test/scripts/test-upload.sftp" } 6>&1 2>&1 | Out-String
+            $output | Should -Match "SFTP_KEYFILE"
+        } finally {
+            $env:SFTP_HOST = $originalHost
+            $env:SFTP_USER = $originalUser
+            $env:SFTP_KEYFILE = $originalKey
+        }
+    }
+}
+
+Describe "Invoke-vSFTP 整合測試" -Tag "Integration" {
+    BeforeAll {
+        $script:ServerRunning = $false
+        $container = docker ps --filter "name=vsftp-test-server" --format "{{.Names}}" 2>$null
+        $script:ServerRunning = ($container -eq "vsftp-test-server")
+        
+        if ($script:ServerRunning) {
+            $env:SFTP_HOST = "localhost"
+            $env:SFTP_PORT = "2222"
+            $env:SFTP_USER = "testuser"
+            $env:SFTP_KEYFILE = "secrets/id_ed25519"
+        }
+    }
+
+    It "應該成功執行 PUT 操作" {
+        if (-not $script:ServerRunning) {
+            Set-ItResult -Skipped -Because "測試伺服器未運行"
+            return
+        }
+
+        $output = & { Invoke-vSFTP -ScriptFile "test/scripts/test-upload.sftp" } 6>&1 2>&1 | Out-String
+        $output | Should -Match "1 passed, 0 failed"
+    }
+
+    It "應該成功執行 GET 操作" {
+        if (-not $script:ServerRunning) {
+            Set-ItResult -Skipped -Because "測試伺服器未運行"
+            return
+        }
+
+        $output = & { Invoke-vSFTP -ScriptFile "test/scripts/test-download.sftp" } 6>&1 2>&1 | Out-String
+        $output | Should -Match "1 passed, 0 failed"
+    }
+
+    It "應該成功展開萬用字元並執行 GET" {
+        if (-not $script:ServerRunning) {
+            Set-ItResult -Skipped -Because "測試伺服器未運行"
+            return
+        }
+
+        $output = & { Invoke-vSFTP -ScriptFile "test/scripts/test-wildcard.sftp" } 6>&1 2>&1 | Out-String
+        $output | Should -Match "3 passed, 0 failed"
+    }
+
+    It "DryRun 模式應該只解析不執行" {
+        if (-not $script:ServerRunning) {
+            Set-ItResult -Skipped -Because "測試伺服器未運行"
+            return
+        }
+
+        $output = & { Invoke-vSFTP -ScriptFile "test/scripts/test-upload.sftp" -DryRun } 6>&1 2>&1 | Out-String
+        $output | Should -Match "Dry Run"
+        $output | Should -Not -Match "Transferring"
     }
 }
