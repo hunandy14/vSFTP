@@ -1,19 +1,19 @@
 function Invoke-SftpExe {
     <#
     .SYNOPSIS
-        Executes sftp.exe with a batch script.
+        使用批次腳本執行 sftp.exe。
     .PARAMETER ScriptFile
-        Path to SFTP batch script.
+        SFTP 批次腳本的路徑。
     .PARAMETER Host
-        Remote host.
+        遠端主機。
     .PARAMETER User
-        Username.
+        使用者名稱。
     .PARAMETER KeyFile
-        Private key file path (required).
+        私鑰檔案路徑（必須）。
     .PARAMETER Port
-        SSH port.
+        SSH 連接埠。
     .PARAMETER SkipHostKeyCheck
-        Skip host key verification.
+        跳過主機金鑰驗證。
     #>
     [CmdletBinding()]
     param(

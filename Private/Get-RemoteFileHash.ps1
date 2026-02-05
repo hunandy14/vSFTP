@@ -1,13 +1,13 @@
 function Get-RemoteFileHash {
     <#
     .SYNOPSIS
-        Calculates SHA256 hash of a remote file via SSH.
+        透過 SSH 計算遠端檔案的 SHA256 雜湊。
     .PARAMETER SessionId
-        Posh-SSH session ID.
+        Posh-SSH 工作階段 ID。
     .PARAMETER RemotePath
-        Path to remote file.
+        遠端檔案的路徑。
     .PARAMETER RemoteOS
-        Remote operating system (Linux, macOS, Windows).
+        遠端作業系統（Linux、macOS、Windows）。
     #>
     [CmdletBinding()]
     param(

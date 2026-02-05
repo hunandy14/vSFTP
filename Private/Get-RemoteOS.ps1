@@ -1,9 +1,9 @@
 function Get-RemoteOS {
     <#
     .SYNOPSIS
-        Detects remote operating system via SSH.
+        透過 SSH 偵測遠端作業系統。
     .PARAMETER SessionId
-        Posh-SSH session ID.
+        Posh-SSH 工作階段 ID。
     #>
     [CmdletBinding()]
     param(

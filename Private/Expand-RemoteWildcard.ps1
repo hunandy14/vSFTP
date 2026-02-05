@@ -1,11 +1,11 @@
 function Expand-RemoteWildcard {
     <#
     .SYNOPSIS
-        Expands remote wildcard pattern using SSH ls command.
+        使用 SSH ls 指令展開遠端萬用字元模式。
     .PARAMETER SessionId
-        Posh-SSH session ID.
+        Posh-SSH 工作階段 ID。
     .PARAMETER RemotePath
-        Remote path with wildcard (e.g., /logs/*.log).
+        包含萬用字元的遠端路徑（例如 /logs/*.log）。
     #>
     [CmdletBinding()]
     param(

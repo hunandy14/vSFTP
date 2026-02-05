@@ -1,20 +1,19 @@
 function Invoke-vSFTP {
     <#
     .SYNOPSIS
-        Execute SFTP batch script with SHA256 hash verification.
+        執行帶有 SHA256 雜湊驗證的 SFTP 批次腳本。
     .DESCRIPTION
-        Parses and executes an SFTP batch script, then verifies all transferred
-        files using SHA256 hashes.
+        解析並執行 SFTP 批次腳本，然後使用 SHA256 雜湊驗證所有傳輸的檔案。
     .PARAMETER ScriptFile
-        Path to SFTP batch script.
+        SFTP 批次腳本的路徑。
     .PARAMETER NoVerify
-        Skip hash verification.
+        跳過雜湊驗證。
     .PARAMETER ContinueOnError
-        Continue execution even if a file fails verification.
+        即使檔案驗證失敗也繼續執行。
     .PARAMETER DryRun
-        Parse script and show what would be done without executing.
+        只解析腳本並顯示將執行的操作，不實際執行。
     .PARAMETER SkipHostKeyCheck
-        Skip SSH host key verification.
+        跳過 SSH 主機金鑰驗證。
     .EXAMPLE
         $env:SFTP_HOST = "example.com"
         $env:SFTP_USER = "user"

@@ -1,15 +1,15 @@
 function Parse-SftpScript {
     <#
     .SYNOPSIS
-        Parses SFTP batch script and extracts file transfer operations.
+        解析 SFTP 批次腳本並提取檔案傳輸操作。
     .DESCRIPTION
-        Tracks cd/lcd commands for path resolution and expands wildcards.
+        追蹤 cd/lcd 指令以解析路徑，並展開萬用字元。
     .PARAMETER ScriptFile
-        Path to SFTP batch script.
+        SFTP 批次腳本的路徑。
     .PARAMETER LocalBase
-        Base local directory (defaults to current directory).
+        本地基礎目錄（預設為當前目錄）。
     .PARAMETER RemoteBase
-        Base remote directory (defaults to /).
+        遠端基礎目錄（預設為 /）。
     #>
     [CmdletBinding()]
     param(

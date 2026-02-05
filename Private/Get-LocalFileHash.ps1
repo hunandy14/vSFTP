@@ -1,9 +1,9 @@
 function Get-LocalFileHash {
     <#
     .SYNOPSIS
-        Calculates SHA256 hash of a local file.
+        計算本地檔案的 SHA256 雜湊。
     .PARAMETER Path
-        Path to local file.
+        本地檔案的路徑。
     #>
     [CmdletBinding()]
     param(
