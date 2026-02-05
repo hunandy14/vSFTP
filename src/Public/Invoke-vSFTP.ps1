@@ -13,18 +13,18 @@
     .PARAMETER SkipHostKeyCheck
         跳過 SSH 主機金鑰驗證。
     .PARAMETER Connection
-        連線字串，格式：user@host:port:keypath 或 user@host:keypath（port 預設 22）
-        若未指定則從環境變數 SFTP_CONNECTION 讀取。
+        連線字串，格式：host=<host>;user=<user>;key=<keypath>[;port=<port>]
+        port 可選，預設 22。若未指定則從環境變數 SFTP_CONNECTION 讀取。
     .EXAMPLE
         # 使用環境變數
-        $env:SFTP_CONNECTION = "user@example.com:22:/home/user/.ssh/id_rsa"
+        $env:SFTP_CONNECTION = "host=example.com;user=admin;key=/home/user/.ssh/id_rsa"
         Invoke-vSFTP -ScriptFile ./upload.sftp
     .EXAMPLE
-        # 使用參數
-        Invoke-vSFTP -ScriptFile ./upload.sftp -Connection "user@example.com:22:/home/user/.ssh/id_rsa"
+        # 使用參數（含 port）
+        Invoke-vSFTP -ScriptFile ./upload.sftp -Connection "host=example.com;user=admin;port=2222;key=/home/user/.ssh/id_rsa"
     .EXAMPLE
-        # 省略 port（預設 22）
-        Invoke-vSFTP -ScriptFile ./upload.sftp -Connection "user@example.com:/home/user/.ssh/id_rsa"
+        # Windows 路徑
+        Invoke-vSFTP -ScriptFile ./upload.sftp -Connection "host=example.com;user=admin;key=C:\Users\me\.ssh\id_rsa"
     #>
     [CmdletBinding()]
     param(
@@ -50,21 +50,33 @@
         
         if (-not $connStr) {
             Write-Host "✗ SFTP_CONNECTION not set" -ForegroundColor Red
-            Write-Host "  Format: user@host:port:keypath or user@host:keypath" -ForegroundColor Gray
+            Write-Host "  Format: host=<host>;user=<user>;key=<keypath>[;port=<port>]" -ForegroundColor Gray
             $exitCode = $EXIT_CONNECTION_FAILED; return
         }
 
-        # 格式：user@host:port:keypath 或 user@host:keypath
-        $config = $null
-        if ($connStr -match '^([^@]+)@([^:]+):(\d+):(.+)$') {
-            # user@host:port:keypath
-            $config = @{ User = $Matches[1]; Host = $Matches[2]; Port = [int]$Matches[3]; KeyFile = $Matches[4] }
-        } elseif ($connStr -match '^([^@]+)@([^:]+):(.+)$') {
-            # user@host:keypath（port 預設 22）
-            $config = @{ User = $Matches[1]; Host = $Matches[2]; Port = 22; KeyFile = $Matches[3] }
-        } else {
-            Write-Host "✗ Invalid connection string format" -ForegroundColor Red
-            Write-Host "  Expected: user@host:port:keypath or user@host:keypath" -ForegroundColor Gray
+        # 格式：host=<host>;user=<user>;key=<keypath>[;port=<port>]
+        $config = @{ Port = 22 }  # port 預設值
+        $connStr -split ';' | ForEach-Object {
+            if ($_ -match '^([^=]+)=(.+)$') {
+                $k = $Matches[1].Trim().ToLower()
+                $v = $Matches[2].Trim()
+                switch ($k) {
+                    'host' { $config.Host = $v }
+                    'user' { $config.User = $v }
+                    'port' { $config.Port = [int]$v }
+                    'key'  { $config.KeyFile = $v }
+                }
+            }
+        }
+
+        # 驗證必要欄位
+        $missing = @()
+        if (-not $config.Host) { $missing += 'host' }
+        if (-not $config.User) { $missing += 'user' }
+        if (-not $config.KeyFile) { $missing += 'key' }
+        if ($missing) {
+            Write-Host "✗ Missing required fields: $($missing -join ', ')" -ForegroundColor Red
+            Write-Host "  Format: host=<host>;user=<user>;key=<keypath>[;port=<port>]" -ForegroundColor Gray
             $exitCode = $EXIT_CONNECTION_FAILED; return
         }
         Write-Host "Host: $($config.User)@$($config.Host):$($config.Port)" -ForegroundColor Gray

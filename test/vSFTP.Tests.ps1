@@ -312,14 +312,14 @@ Describe "Invoke-vSFTP 連線字串" {
         }
     }
 
-    It "應該在連線字串格式錯誤時顯示錯誤" {
+    It "應該在缺少必要欄位時顯示錯誤" {
         $original = $env:SFTP_CONNECTION
         
         try {
-            $env:SFTP_CONNECTION = "invalid-format"
+            $env:SFTP_CONNECTION = "host=localhost"  # 缺少 user 和 key
             
             $output = & { Invoke-vSFTP -ScriptFile "test/scripts/test-upload.sftp" } 6>&1 2>&1 | Out-String
-            $output | Should -Match "Invalid connection string"
+            $output | Should -Match "Missing required fields"
         } finally {
             $env:SFTP_CONNECTION = $original
         }
@@ -330,8 +330,7 @@ Describe "Invoke-vSFTP 連線字串" {
         
         try {
             # 使用不存在的主機測試解析（會在連線時失敗，但能驗證解析正確）
-            # 使用實際存在的 keyfile 路徑以通過路徑驗證
-            $env:SFTP_CONNECTION = "testuser@nonexistent.host:2222:secrets/id_ed25519"
+            $env:SFTP_CONNECTION = "host=nonexistent.host;port=2222;user=testuser;key=secrets/id_ed25519"
             
             $output = & { Invoke-vSFTP -ScriptFile "test/scripts/test-upload.sftp" } 6>&1 2>&1 | Out-String
             $output | Should -Match "testuser@nonexistent.host:2222"
@@ -348,7 +347,7 @@ Describe "Invoke-vSFTP 整合測試" -Tag "Integration" {
         $script:ServerRunning = ($container -eq "vsftp-test-server")
         
         if ($script:ServerRunning) {
-            $env:SFTP_CONNECTION = "testuser@localhost:2222:secrets/id_ed25519"
+            $env:SFTP_CONNECTION = "host=localhost;port=2222;user=testuser;key=secrets/id_ed25519"
         }
     }
 
