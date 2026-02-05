@@ -1,8 +1,0 @@
-# Example SFTP batch script
-# Download files from remote server
-
-lcd /tmp/downloads
-cd /reports
-
-get report.pdf
-get logs/*.log

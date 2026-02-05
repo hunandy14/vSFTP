@@ -1,8 +1,0 @@
-# Example SFTP batch script
-# Upload files to remote server
-
-lcd /tmp
-cd /upload
-
-put test.txt
-put data/*.csv
