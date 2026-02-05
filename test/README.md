@@ -2,21 +2,22 @@
 
 ## 快速開始
 
-```bash
+```powershell
 # 啟動測試伺服器
-pwsh test/init.ps1
+./test/init.ps1
 
 # 設定環境變數
-export SFTP_HOST=localhost
-export SFTP_PORT=2222
-export SFTP_USER=testuser
-export SFTP_KEYFILE=test/test_key
+$env:SFTP_HOST = "localhost"
+$env:SFTP_PORT = "2222"
+$env:SFTP_USER = "testuser"
+$env:SFTP_KEYFILE = "test/test_key"
 
 # 執行測試
-pwsh -Command "Import-Module ./vSFTP.psd1; Invoke-vSFTP -ScriptFile test/scripts/test-upload.sftp -SkipHostKeyCheck"
+Import-Module ./src/vSFTP.psd1
+Invoke-vSFTP -ScriptFile test/scripts/test-upload.sftp -SkipHostKeyCheck
 
 # 關閉測試伺服器
-pwsh test/init.ps1 -Down
+./test/init.ps1 -Down
 ```
 
 ## 測試伺服器資訊
