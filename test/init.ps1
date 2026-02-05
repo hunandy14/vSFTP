@@ -8,13 +8,13 @@
     關閉並清理測試環境
 .PARAMETER Reset
     重置環境（關閉後重新啟動）
-.PARAMETER SkipHostKey
-    跳過 host key 註冊（首次連線需手動輸入 yes 或使用 -SkipHostKeyCheck）
+.PARAMETER NoHostKey
+    不註冊 host key（首次連線需手動輸入 yes 或使用 -SkipHostKeyCheck）
 #>
 param(
     [switch]$Down,
     [switch]$Reset,
-    [switch]$SkipHostKey
+    [switch]$NoHostKey
 )
 
 $ErrorActionPreference = "Stop"
@@ -119,8 +119,8 @@ function Initialize-TestFiles {
     Write-Host "  測試檔案已建立" -ForegroundColor Green
 }
 
-function Show-Info([switch]$SkipHostKey) {
-    $skipFlag = if ($SkipHostKey) { " -SkipHostKeyCheck" } else { "" }
+function Show-Info([switch]$NoHostKey) {
+    $skipFlag = if ($NoHostKey) { " -SkipHostKeyCheck" } else { "" }
     
     Write-Host ""
     Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
@@ -159,8 +159,8 @@ if ($Reset) {
 
 Remove-HostKey
 Start-TestServer
-if (-not $SkipHostKey) {
+if (-not $NoHostKey) {
     Add-HostKey
 }
 Initialize-TestFiles
-Show-Info -SkipHostKey:$SkipHostKey
+Show-Info -NoHostKey:$NoHostKey
