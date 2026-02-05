@@ -25,7 +25,8 @@ if (Test-Path $DistDir) {
 }
 New-Item -ItemType Directory -Path $DistDir | Out-Null
 
-Write-Host "► 建置 vSFTP..." -ForegroundColor Yellow
+Write-Host "► 建置 vSFTP: " -ForegroundColor Yellow -NoNewline
+Write-Host "$SrcDir/" -ForegroundColor DarkGray
 
 # 收集所有程式碼
 $content = @()
@@ -58,14 +59,13 @@ function Remove-Comments {
     if ($AllComments) {
         # 移除區塊註解
         $Code = $Code -replace '(?s)<#.*?#>\s*', ''
-        # 移除行註解（但保留 #region/#endregion/#Requires）
+        # 移除行註解（但保留 #region/#endregion/#Requires）和空行
         $Code = ($Code -split "`n" | Where-Object { 
-            $_.Trim() -eq '' -or 
-            $_.Trim() -notmatch '^#' -or 
-            $_.Trim() -match '^#(region|endregion|Requires)'
+            $_.Trim() -ne '' -and (
+                $_.Trim() -notmatch '^#' -or 
+                $_.Trim() -match '^#(region|endregion|Requires)'
+            )
         }) -join "`n"
-        # 移除連續空行
-        $Code = $Code -replace "(`n\s*){3,}", "`n`n"
     } elseif ($BlockComments) {
         # 只移除區塊註解
         $Code = $Code -replace '(?s)<#.*?#>\s*', ''
@@ -74,12 +74,24 @@ function Remove-Comments {
     return $Code.Trim()
 }
 
+# 統計資料
+$stats = @()
+
 # 私有函數
 $privateFiles = if (Test-Path "$SrcDir/Private") { Get-ChildItem -Path "$SrcDir/Private/*.ps1" -File } else { @() }
 foreach ($file in $privateFiles) {
-    Write-Host "  + Private/$($file.Name)" -ForegroundColor Gray
-    $code = (Get-Content $file.FullName -Raw).Trim()
-    $code = Remove-Comments -Code $code -BlockComments:$StripBlockComments -AllComments:$StripAllComments
+    $originalCode = (Get-Content $file.FullName -Raw).Trim()
+    $originalLines = ($originalCode -split "`n").Count
+    $code = Remove-Comments -Code $originalCode -BlockComments:$StripBlockComments -AllComments:$StripAllComments
+    $effectiveLines = ($code -split "`n").Count
+    $ratio = if ($originalLines -gt 0) { [math]::Round($effectiveLines / $originalLines * 100) } else { 100 }
+    $fileSizeKB = [math]::Round($file.Length / 1KB, 1)
+    
+    Write-Host "  + Private/" -ForegroundColor White -NoNewline
+    Write-Host ("{0,-30}" -f $file.Name) -ForegroundColor White -NoNewline
+    Write-Host (" {0,4}/{1,-4} ({2}%)  {3} KB" -f $effectiveLines, $originalLines, $ratio, $fileSizeKB) -ForegroundColor DarkGray
+    $stats += [PSCustomObject]@{ Name = $file.Name; Original = $originalLines; Effective = $effectiveLines }
+    
     $content += "#region $($file.BaseName)"
     $content += $code
     $content += "#endregion"
@@ -89,9 +101,18 @@ foreach ($file in $privateFiles) {
 # 公開函數
 $publicFiles = if (Test-Path "$SrcDir/Public") { Get-ChildItem -Path "$SrcDir/Public/*.ps1" -File } else { @() }
 foreach ($file in $publicFiles) {
-    Write-Host "  + Public/$($file.Name)" -ForegroundColor Gray
-    $code = (Get-Content $file.FullName -Raw).Trim()
-    $code = Remove-Comments -Code $code -BlockComments:$StripBlockComments -AllComments:$StripAllComments
+    $originalCode = (Get-Content $file.FullName -Raw).Trim()
+    $originalLines = ($originalCode -split "`n").Count
+    $code = Remove-Comments -Code $originalCode -BlockComments:$StripBlockComments -AllComments:$StripAllComments
+    $effectiveLines = ($code -split "`n").Count
+    $ratio = if ($originalLines -gt 0) { [math]::Round($effectiveLines / $originalLines * 100) } else { 100 }
+    $fileSizeKB = [math]::Round($file.Length / 1KB, 1)
+    
+    Write-Host "  + Public/" -ForegroundColor White -NoNewline
+    Write-Host ("{0,-31}" -f $file.Name) -ForegroundColor White -NoNewline
+    Write-Host (" {0,4}/{1,-4} ({2}%)  {3} KB" -f $effectiveLines, $originalLines, $ratio, $fileSizeKB) -ForegroundColor DarkGray
+    $stats += [PSCustomObject]@{ Name = $file.Name; Original = $originalLines; Effective = $effectiveLines }
+    
     $content += "#region $($file.BaseName)"
     $content += $code
     $content += "#endregion"
@@ -110,14 +131,22 @@ $content += "#endregion"
 $outputPath = Join-Path $DistDir "vSFTP.ps1"
 $content -join "`n" | Set-Content -Path $outputPath -NoNewline
 
-Write-Host ""
-Write-Host "► 建置完成" -ForegroundColor Green
-Write-Host "  輸出: $outputPath" -ForegroundColor Gray
-
-# 顯示檔案大小
+# 輸出檔案統計
+$outputContent = Get-Content $outputPath
+$outputTotal = $outputContent.Count
+$outputEffective = ($outputContent | Where-Object { $_.Trim() -ne '' -and ($_.Trim() -notmatch '^#' -or $_.Trim() -match '^#(region|endregion|Requires)') }).Count
+$outputRatio = if ($outputTotal -gt 0) { [math]::Round($outputEffective / $outputTotal * 100) } else { 100 }
 $fileSize = (Get-Item $outputPath).Length
-Write-Host "  大小: $([math]::Round($fileSize / 1KB, 1)) KB" -ForegroundColor Gray
+$sizeKB = [math]::Round($fileSize / 1KB, 1)
 
 Write-Host ""
-Write-Host "  使用方式:" -ForegroundColor White
-Write-Host "    ./dist/vSFTP.ps1 -ScriptFile <script.sftp>" -ForegroundColor Gray
+Write-Host "► 建置完成: " -ForegroundColor Green -NoNewline
+Write-Host "$DistDir/" -ForegroundColor DarkGray
+Write-Host "    1. " -ForegroundColor DarkGray -NoNewline
+Write-Host ("{0,-38}" -f "vSFTP.ps1") -ForegroundColor Cyan -NoNewline
+Write-Host (" {0,4}/{1,-4} ({2}%)  {3} KB" -f $outputEffective, $outputTotal, $outputRatio, $sizeKB) -ForegroundColor DarkGray
+Write-Host ""
+Write-Host "  使用方式: " -ForegroundColor White -NoNewline
+Write-Host "./dist/vSFTP.ps1 " -ForegroundColor Yellow -NoNewline
+Write-Host "-ScriptFile " -ForegroundColor DarkGray -NoNewline
+Write-Host "<script.sftp>" -ForegroundColor White
