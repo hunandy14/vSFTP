@@ -1,25 +1,29 @@
-﻿#Requires -Version 7.0
+#Requires -Version 7.0
 #Requires -Modules Posh-SSH
 
 # 匯入私有函數
-$Private = @(Get-ChildItem -Path "$PSScriptRoot/Private/*.ps1" -ErrorAction SilentlyContinue)
-foreach ($file in $Private) {
-    try {
-        . $file.FullName
-    } catch {
-        Write-Error "Failed to import $($file.FullName): $_"
+$PrivatePath = "$PSScriptRoot/Private"
+if (Test-Path $PrivatePath) {
+    foreach ($file in Get-ChildItem -Path "$PrivatePath/*.ps1" -File) {
+        try {
+            . $file.FullName
+        } catch {
+            throw "Failed to import $($file.FullName): $_"
+        }
     }
 }
 
 # 匯入公開函數
-$Public = @(Get-ChildItem -Path "$PSScriptRoot/Public/*.ps1" -ErrorAction SilentlyContinue)
-foreach ($file in $Public) {
-    try {
-        . $file.FullName
-    } catch {
-        Write-Error "Failed to import $($file.FullName): $_"
+$PublicPath = "$PSScriptRoot/Public"
+if (Test-Path $PublicPath) {
+    $Public = Get-ChildItem -Path "$PublicPath/*.ps1" -File
+    foreach ($file in $Public) {
+        try {
+            . $file.FullName
+        } catch {
+            throw "Failed to import $($file.FullName): $_"
+        }
     }
+    # 匯出公開函數
+    Export-ModuleMember -Function $Public.BaseName
 }
-
-# 匯出公開函數
-Export-ModuleMember -Function $Public.BaseName

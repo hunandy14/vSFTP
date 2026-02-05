@@ -38,7 +38,7 @@
 
         # 驗證環境變數
         $required = @('SFTP_HOST', 'SFTP_USER', 'SFTP_KEYFILE')
-        $missing = $required | Where-Object { -not (Get-Item "env:$_" -ErrorAction SilentlyContinue) }
+        $missing = $required | Where-Object { -not [Environment]::GetEnvironmentVariable($_) }
         if ($missing) {
             $missing | ForEach-Object { Write-Host "✗ $_ not set" -ForegroundColor Red }
             $exitCode = $EXIT_CONNECTION_FAILED; return
@@ -91,7 +91,7 @@
                 Credential = New-Object PSCredential($config.User, (New-Object SecureString))
                 ConnectionTimeout = 30; AcceptKey = $true; Force = $true
             }
-            $sshSession = New-SSHSession @sshParams -WarningAction SilentlyContinue
+            $sshSession = New-SSHSession @sshParams
 
             if (-not $sshSession) {
                 Write-Host "✗ SSH failed" -ForegroundColor Red
@@ -166,7 +166,9 @@
         if ($failed -gt 0) { $exitCode = $EXIT_VERIFY_FAILED }
 
     } finally {
-        if ($sshSession) { Remove-SSHSession -SessionId $sshSession.SessionId -ErrorAction SilentlyContinue | Out-Null }
+        if ($sshSession) { 
+            try { Remove-SSHSession -SessionId $sshSession.SessionId | Out-Null } catch { }
+        }
     }
 
     $global:LASTEXITCODE = $exitCode
