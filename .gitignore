@@ -15,6 +15,6 @@ test/remote/*
 !test/**/.gitkeep
 *.test.ps1
 
-# SSH keys (private)
-test/test_key
+# Secrets (SSH keys, credentials)
+SECRET/
 .env

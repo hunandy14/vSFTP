@@ -127,11 +127,11 @@ function Show-Info {
     Write-Host "  連線資訊:" -ForegroundColor White
     Write-Host "    Host:    localhost:2222" -ForegroundColor Gray
     Write-Host "    User:    testuser" -ForegroundColor Gray
-    Write-Host "    Key:     test/keys/test_key" -ForegroundColor Gray
+    Write-Host "    Key:     SECRET/id_ed25519" -ForegroundColor Gray
     Write-Host ""
     Write-Host "  測試指令:" -ForegroundColor White
     Write-Host '    $env:SFTP_HOST="localhost"; $env:SFTP_PORT="2222"' -ForegroundColor Gray
-    Write-Host '    $env:SFTP_USER="testuser"; $env:SFTP_KEYFILE="test/keys/test_key"' -ForegroundColor Gray
+    Write-Host '    $env:SFTP_USER="testuser"; $env:SFTP_KEYFILE="SECRET/id_ed25519"' -ForegroundColor Gray
     Write-Host '    Import-Module ./src/vSFTP.psd1' -ForegroundColor Gray
     Write-Host '    Invoke-vSFTP -ScriptFile test/scripts/test-upload.sftp' -ForegroundColor Gray
     Write-Host ""

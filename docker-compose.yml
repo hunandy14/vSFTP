@@ -13,12 +13,12 @@ services:
       - USER_PASSWORD=testpass
       - PASSWORD_ACCESS=true
       - SUDO_ACCESS=false
-      - PUBLIC_KEY_FILE=/config/keys/test_key.pub
+      - PUBLIC_KEY_FILE=/config/keys/id_ed25519.pub
     ports:
       - "2222:2222"
     volumes:
       - ./test/remote:/home/testuser/upload
-      - ./test/keys:/config/keys:ro
+      - ./SECRET:/config/keys:ro
     restart: unless-stopped
 
 volumes:
