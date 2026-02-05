@@ -132,7 +132,7 @@ function Show-Info {
     Write-Host '    Invoke-vSFTP -ScriptFile test/scripts/test-upload.sftp' -ForegroundColor Gray
     Write-Host ""
     Write-Host "  關閉環境:" -ForegroundColor White
-    Write-Host '    ./dev.ps1 -Down' -ForegroundColor Gray
+    Write-Host '    ./docker-up.ps1 -Down' -ForegroundColor Gray
     Write-Host ""
 }
 
