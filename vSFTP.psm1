@@ -2,7 +2,7 @@
 #Requires -Modules Posh-SSH
 
 # 匯入私有函數
-$Private = @(Get-ChildItem -Path "$PSScriptRoot/Private/*.ps1" -ErrorAction SilentlyContinue)
+$Private = @(Get-ChildItem -Path "$PSScriptRoot/src/Private/*.ps1" -ErrorAction SilentlyContinue)
 foreach ($file in $Private) {
     try {
         . $file.FullName
@@ -12,7 +12,7 @@ foreach ($file in $Private) {
 }
 
 # 匯入公開函數
-$Public = @(Get-ChildItem -Path "$PSScriptRoot/Public/*.ps1" -ErrorAction SilentlyContinue)
+$Public = @(Get-ChildItem -Path "$PSScriptRoot/src/Public/*.ps1" -ErrorAction SilentlyContinue)
 foreach ($file in $Public) {
     try {
         . $file.FullName
