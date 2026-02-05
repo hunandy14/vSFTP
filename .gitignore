@@ -17,3 +17,4 @@ test/remote/*
 
 # SSH keys (private)
 test/test_key
+.env
