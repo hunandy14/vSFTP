@@ -136,7 +136,15 @@
 
             Write-Host "  Connected (Session $($sshSession.SessionId))" -ForegroundColor Gray
 
-            $remoteOS = Get-RemoteOS -SessionId $sshSession.SessionId
+            # 偵測遠端 OS
+            $unameResult = Invoke-SSHCommand -SessionId $sshSession.SessionId -Command "uname -s" -TimeOut 30
+            $remoteOS = if ($unameResult.ExitStatus -eq 0) {
+                switch -Regex ($unameResult.Output.Trim()) {
+                    'Linux'  { 'Linux' }
+                    'Darwin' { 'macOS' }
+                    default  { 'Linux' }
+                }
+            } else { 'Windows' }
             Write-Host "  Remote OS: $remoteOS" -ForegroundColor Gray
             Write-Host ""
         }
