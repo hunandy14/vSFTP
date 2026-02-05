@@ -9,7 +9,7 @@
 .PARAMETER Reset
     重置環境（關閉後重新啟動）
 .PARAMETER SkipHostKey
-    跳過 host key 註冊（使用 -SkipHostKeyCheck 參數執行）
+    跳過 host key 註冊（首次連線需手動輸入 yes 或使用 -SkipHostKeyCheck）
 #>
 param(
     [switch]$Down,
