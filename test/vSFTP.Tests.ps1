@@ -338,6 +338,64 @@ Describe "Invoke-vSFTP 連線字串" {
             $env:SFTP_CONNECTION = $original
         }
     }
+
+    It "應該支援任意欄位順序" {
+        $original = $env:SFTP_CONNECTION
+        
+        try {
+            # user 在前，host 在後
+            $env:SFTP_CONNECTION = "user=testuser;key=secrets/id_ed25519;host=order.test;port=22"
+            
+            $output = & { Invoke-vSFTP -ScriptFile "test/scripts/test-upload.sftp" } 6>&1 2>&1 | Out-String
+            $output | Should -Match "testuser@order.test:22"
+        } finally {
+            $env:SFTP_CONNECTION = $original
+        }
+    }
+
+    It "應該在省略 port 時使用預設值 22" {
+        $original = $env:SFTP_CONNECTION
+        
+        try {
+            # 沒有 port 欄位
+            $env:SFTP_CONNECTION = "host=default-port.test;user=testuser;key=secrets/id_ed25519"
+            
+            $output = & { Invoke-vSFTP -ScriptFile "test/scripts/test-upload.sftp" } 6>&1 2>&1 | Out-String
+            $output | Should -Match "testuser@default-port.test:22"
+        } finally {
+            $env:SFTP_CONNECTION = $original
+        }
+    }
+
+    It "應該正確處理 Windows 路徑" {
+        $original = $env:SFTP_CONNECTION
+        
+        try {
+            # Windows 風格路徑（C:\path\to\key）
+            # 使用 -DryRun 避免嘗試讀取 key file
+            $env:SFTP_CONNECTION = "host=win.test;user=testuser;key=C:\Users\me\.ssh\id_rsa"
+            
+            $output = & { Invoke-vSFTP -ScriptFile "test/scripts/test-upload.sftp" -DryRun } 6>&1 2>&1 | Out-String
+            # 應該顯示正確的 key 路徑（DryRun 會在連線前顯示 Key: ...）
+            $output | Should -Match "C:\\Users\\me\\\.ssh\\id_rsa"
+        } finally {
+            $env:SFTP_CONNECTION = $original
+        }
+    }
+
+    It "應該處理欄位周圍的空白" {
+        $original = $env:SFTP_CONNECTION
+        
+        try {
+            # 有空白
+            $env:SFTP_CONNECTION = "host = space.test ; user = testuser ; key = secrets/id_ed25519"
+            
+            $output = & { Invoke-vSFTP -ScriptFile "test/scripts/test-upload.sftp" } 6>&1 2>&1 | Out-String
+            $output | Should -Match "testuser@space.test:22"
+        } finally {
+            $env:SFTP_CONNECTION = $original
+        }
+    }
 }
 
 Describe "Invoke-vSFTP 整合測試" -Tag "Integration" {
