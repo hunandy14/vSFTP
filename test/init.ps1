@@ -8,10 +8,13 @@
     關閉並清理測試環境
 .PARAMETER Reset
     重置環境（關閉後重新啟動）
+.PARAMETER SkipHostKey
+    跳過 host key 註冊（使用 -SkipHostKeyCheck 參數執行）
 #>
 param(
     [switch]$Down,
-    [switch]$Reset
+    [switch]$Reset,
+    [switch]$SkipHostKey
 )
 
 $ErrorActionPreference = "Stop"
@@ -116,7 +119,9 @@ function Initialize-TestFiles {
     Write-Host "  測試檔案已建立" -ForegroundColor Green
 }
 
-function Show-Info {
+function Show-Info([switch]$SkipHostKey) {
+    $skipFlag = if ($SkipHostKey) { " -SkipHostKeyCheck" } else { "" }
+    
     Write-Host ""
     Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
     Write-Host "  vSFTP 測試環境已就緒" -ForegroundColor Cyan
@@ -130,11 +135,11 @@ function Show-Info {
     Write-Host "  測試指令:" -ForegroundColor White
     Write-Host '    $env:SFTP_HOST="localhost"; $env:SFTP_PORT="2222"' -ForegroundColor Gray
     Write-Host '    $env:SFTP_USER="testuser"; $env:SFTP_KEYFILE="test/test_key"' -ForegroundColor Gray
-    Write-Host '    Import-Module ./vSFTP.psd1' -ForegroundColor Gray
-    Write-Host '    Invoke-vSFTP -ScriptFile test/scripts/test-upload.sftp -SkipHostKeyCheck' -ForegroundColor Gray
+    Write-Host '    Import-Module ./src/vSFTP.psd1' -ForegroundColor Gray
+    Write-Host "    Invoke-vSFTP -ScriptFile test/scripts/test-upload.sftp$skipFlag" -ForegroundColor Gray
     Write-Host ""
     Write-Host "  關閉環境:" -ForegroundColor White
-    Write-Host '    pwsh test/init.ps1 -Down' -ForegroundColor Gray
+    Write-Host '    ./test/init.ps1 -Down' -ForegroundColor Gray
     Write-Host ""
 }
 
@@ -154,6 +159,8 @@ if ($Reset) {
 
 Remove-HostKey
 Start-TestServer
-Add-HostKey
+if (-not $SkipHostKey) {
+    Add-HostKey
+}
 Initialize-TestFiles
-Show-Info
+Show-Info -SkipHostKey:$SkipHostKey
