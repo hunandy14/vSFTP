@@ -1,9 +1,9 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    建置 vSFTP 模組為單一檔案
+    建置 vSFTP 為單一 .ps1 檔案
 .DESCRIPTION
-    合併所有 .ps1 檔案為單一 .psm1，輸出到 dist/
+    合併所有函數為單一可執行腳本
 #>
 
 $ErrorActionPreference = "Stop"
@@ -17,16 +17,25 @@ if (Test-Path $DistDir) {
 }
 New-Item -ItemType Directory -Path $DistDir | Out-Null
 
-Write-Host "► 建置 vSFTP 模組..." -ForegroundColor Yellow
+Write-Host "► 建置 vSFTP..." -ForegroundColor Yellow
 
 # 收集所有程式碼
 $content = @()
 
 # 標頭
+$content += "#!/usr/bin/env pwsh"
 $content += "#Requires -Version 7.0"
 $content += "#Requires -Modules Posh-SSH"
 $content += ""
-$content += "# vSFTP - SFTP with Hash Verification"
+$content += "<#"
+$content += ".SYNOPSIS"
+$content += "    vSFTP - SFTP with Hash Verification"
+$content += ".DESCRIPTION"
+$content += "    執行 SFTP 傳輸並驗證 SHA256 雜湊"
+$content += ".EXAMPLE"
+$content += "    ./vSFTP.ps1 -ScriptFile upload.sftp"
+$content += "#>"
+$content += ""
 $content += "# Built: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
 $content += ""
 
@@ -50,28 +59,26 @@ foreach ($file in $publicFiles) {
     $content += ""
 }
 
-# 匯出
-$exportFunctions = ($publicFiles | ForEach-Object { $_.BaseName }) -join "', '"
-$content += "Export-ModuleMember -Function '$exportFunctions'"
+# 主程式入口
+$content += "#region Main"
+$content += 'if ($MyInvocation.InvocationName -ne ".") {'
+$content += '    # 直接執行時，呼叫 Invoke-vSFTP'
+$content += '    Invoke-vSFTP @args'
+$content += '}'
+$content += "#endregion"
 
-# 寫入 .psm1
-$psmPath = Join-Path $DistDir "vSFTP.psm1"
-$content -join "`n" | Set-Content -Path $psmPath -NoNewline
-
-# 複製 .psd1（更新 RootModule 路徑）
-$psdSource = Join-Path $SrcDir "vSFTP.psd1"
-$psdDest = Join-Path $DistDir "vSFTP.psd1"
-$psdContent = Get-Content $psdSource -Raw
-$psdContent = $psdContent -replace "RootModule\s*=\s*'[^']*'", "RootModule = 'vSFTP.psm1'"
-$psdContent | Set-Content -Path $psdDest -NoNewline
+# 寫入 .ps1
+$outputPath = Join-Path $DistDir "vSFTP.ps1"
+$content -join "`n" | Set-Content -Path $outputPath -NoNewline
 
 Write-Host ""
 Write-Host "► 建置完成" -ForegroundColor Green
-Write-Host "  輸出: $DistDir" -ForegroundColor Gray
+Write-Host "  輸出: $outputPath" -ForegroundColor Gray
 
 # 顯示檔案大小
-$psmSize = (Get-Item $psmPath).Length
-$psdSize = (Get-Item $psdDest).Length
+$fileSize = (Get-Item $outputPath).Length
+Write-Host "  大小: $([math]::Round($fileSize / 1KB, 1)) KB" -ForegroundColor Gray
+
 Write-Host ""
-Write-Host "  vSFTP.psm1  $([math]::Round($psmSize / 1KB, 1)) KB" -ForegroundColor Gray
-Write-Host "  vSFTP.psd1  $([math]::Round($psdSize / 1KB, 1)) KB" -ForegroundColor Gray
+Write-Host "  使用方式:" -ForegroundColor White
+Write-Host "    ./dist/vSFTP.ps1 -ScriptFile <script.sftp>" -ForegroundColor Gray
