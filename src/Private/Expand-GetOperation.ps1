@@ -33,14 +33,11 @@ function Expand-GetOperation {
         }
 
         # 分離目錄和檔名模式
-        $remotePath = $op.RemotePath
-        $dirPath = Split-Path $remotePath -Parent
-        $pattern = Split-Path $remotePath -Leaf
+        $dirPath = Split-Path $op.RemotePath -Parent
+        $pattern = Split-Path $op.RemotePath -Leaf
 
         # 空目錄路徑時預設為當前目錄
-        if ([string]::IsNullOrEmpty($dirPath)) {
-            $dirPath = "."
-        }
+        if (-not $dirPath) { $dirPath = "." }
 
         # 驗證模式不含危險字元（只允許 * ? [ ] 和一般檔名字元）
         # 禁止: ; | $ ` \ < > & ' " 換行符
@@ -68,11 +65,10 @@ function Expand-GetOperation {
         }
 
         $remoteFiles = $findResult.Output -split "`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ }
+        $localDir = Split-Path $op.LocalPath -Parent
 
         foreach ($remoteFile in $remoteFiles) {
-            $fileName = Split-Path $remoteFile -Leaf
-            $localDir = Split-Path $op.LocalPath -Parent
-            $localPath = Join-Path $localDir $fileName
+            $localPath = Join-Path $localDir (Split-Path $remoteFile -Leaf)
 
             $expandedOps += [PSCustomObject]@{
                 Action      = 'get'
