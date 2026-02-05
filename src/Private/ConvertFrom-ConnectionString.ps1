@@ -5,6 +5,7 @@ function ConvertFrom-ConnectionString {
     .DESCRIPTION
         將 key=value 格式的連線字串轉換為設定物件。
         格式：host=<host>;user=<user>;key=<keypath>[;port=<port>]
+        注意：欄位值不能包含分號（;），因為分號用於分隔欄位。
     .PARAMETER ConnectionString
         連線字串。
     .OUTPUTS
