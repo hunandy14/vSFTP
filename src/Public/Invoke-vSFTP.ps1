@@ -14,14 +14,13 @@
         跳過 SSH 主機金鑰驗證。
     .PARAMETER Connection
         連線字串，格式：user@host:port:keypath 或 user@host:keypath（port 預設 22）
+        若未指定則從環境變數 SFTP_CONNECTION 讀取。
     .EXAMPLE
         # 使用環境變數
-        $env:SFTP_HOST = "example.com"
-        $env:SFTP_USER = "user"
-        $env:SFTP_KEYFILE = "~/.ssh/id_rsa"
+        $env:SFTP_CONNECTION = "user@example.com:22:/home/user/.ssh/id_rsa"
         Invoke-vSFTP -ScriptFile ./upload.sftp
     .EXAMPLE
-        # 使用連線字串
+        # 使用參數
         Invoke-vSFTP -ScriptFile ./upload.sftp -Connection "user@example.com:22:/home/user/.ssh/id_rsa"
     .EXAMPLE
         # 省略 port（預設 22）
@@ -46,33 +45,27 @@
         Write-Host "  vSFTP - SFTP with Hash Verification" -ForegroundColor Cyan
         Write-Host "═══════════════════════════════════════════════════════════════`n" -ForegroundColor Cyan
 
-        # 解析連線設定
+        # 解析連線設定（參數優先，否則讀環境變數 SFTP_CONNECTION）
+        $connStr = if ($Connection) { $Connection } else { $env:SFTP_CONNECTION }
+        
+        if (-not $connStr) {
+            Write-Host "✗ SFTP_CONNECTION not set" -ForegroundColor Red
+            Write-Host "  Format: user@host:port:keypath or user@host:keypath" -ForegroundColor Gray
+            $exitCode = $EXIT_CONNECTION_FAILED; return
+        }
+
+        # 格式：user@host:port:keypath 或 user@host:keypath
         $config = $null
-        if ($Connection) {
-            # 格式：user@host:port:keypath 或 user@host:keypath
-            if ($Connection -match '^([^@]+)@([^:]+):(\d+):(.+)$') {
-                # user@host:port:keypath
-                $config = @{ User = $Matches[1]; Host = $Matches[2]; Port = [int]$Matches[3]; KeyFile = $Matches[4] }
-            } elseif ($Connection -match '^([^@]+)@([^:]+):(.+)$') {
-                # user@host:keypath（port 預設 22）
-                $config = @{ User = $Matches[1]; Host = $Matches[2]; Port = 22; KeyFile = $Matches[3] }
-            } else {
-                Write-Host "✗ Invalid connection string format" -ForegroundColor Red
-                Write-Host "  Expected: user@host:port:keypath or user@host:keypath" -ForegroundColor Gray
-                $exitCode = $EXIT_CONNECTION_FAILED; return
-            }
+        if ($connStr -match '^([^@]+)@([^:]+):(\d+):(.+)$') {
+            # user@host:port:keypath
+            $config = @{ User = $Matches[1]; Host = $Matches[2]; Port = [int]$Matches[3]; KeyFile = $Matches[4] }
+        } elseif ($connStr -match '^([^@]+)@([^:]+):(.+)$') {
+            # user@host:keypath（port 預設 22）
+            $config = @{ User = $Matches[1]; Host = $Matches[2]; Port = 22; KeyFile = $Matches[3] }
         } else {
-            # 從環境變數讀取
-            $required = @('SFTP_HOST', 'SFTP_USER', 'SFTP_KEYFILE')
-            $missing = $required | Where-Object { -not [Environment]::GetEnvironmentVariable($_) }
-            if ($missing) {
-                $missing | ForEach-Object { Write-Host "✗ $_ not set" -ForegroundColor Red }
-                $exitCode = $EXIT_CONNECTION_FAILED; return
-            }
-            $config = @{
-                Host = $env:SFTP_HOST; User = $env:SFTP_USER; KeyFile = $env:SFTP_KEYFILE
-                Port = if ($env:SFTP_PORT) { [int]$env:SFTP_PORT } else { 22 }
-            }
+            Write-Host "✗ Invalid connection string format" -ForegroundColor Red
+            Write-Host "  Expected: user@host:port:keypath or user@host:keypath" -ForegroundColor Gray
+            $exitCode = $EXIT_CONNECTION_FAILED; return
         }
         Write-Host "Host: $($config.User)@$($config.Host):$($config.Port)" -ForegroundColor Gray
         Write-Host "Key:  $($config.KeyFile)`n" -ForegroundColor Gray

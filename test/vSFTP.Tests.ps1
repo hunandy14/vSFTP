@@ -297,62 +297,46 @@ Describe "Test-FileHash" {
     }
 }
 
-Describe "Invoke-vSFTP 環境變數" {
-    It "應該在缺少 SFTP_HOST 時顯示錯誤" {
-        $originalHost = $env:SFTP_HOST
-        $originalUser = $env:SFTP_USER
-        $originalKey = $env:SFTP_KEYFILE
+Describe "Invoke-vSFTP 連線字串" {
+    It "應該在缺少 SFTP_CONNECTION 時顯示錯誤" {
+        $original = $env:SFTP_CONNECTION
         
         try {
-            $env:SFTP_HOST = $null
-            $env:SFTP_USER = "test"
-            $env:SFTP_KEYFILE = "test"
+            $env:SFTP_CONNECTION = $null
             
             # 使用 6>&1 捕獲所有輸出
             $output = & { Invoke-vSFTP -ScriptFile "test/scripts/test-upload.sftp" } 6>&1 2>&1 | Out-String
-            $output | Should -Match "SFTP_HOST"
+            $output | Should -Match "SFTP_CONNECTION not set"
         } finally {
-            $env:SFTP_HOST = $originalHost
-            $env:SFTP_USER = $originalUser
-            $env:SFTP_KEYFILE = $originalKey
+            $env:SFTP_CONNECTION = $original
         }
     }
 
-    It "應該在缺少 SFTP_USER 時顯示錯誤" {
-        $originalHost = $env:SFTP_HOST
-        $originalUser = $env:SFTP_USER
-        $originalKey = $env:SFTP_KEYFILE
+    It "應該在連線字串格式錯誤時顯示錯誤" {
+        $original = $env:SFTP_CONNECTION
         
         try {
-            $env:SFTP_HOST = "test"
-            $env:SFTP_USER = $null
-            $env:SFTP_KEYFILE = "test"
+            $env:SFTP_CONNECTION = "invalid-format"
             
             $output = & { Invoke-vSFTP -ScriptFile "test/scripts/test-upload.sftp" } 6>&1 2>&1 | Out-String
-            $output | Should -Match "SFTP_USER"
+            $output | Should -Match "Invalid connection string"
         } finally {
-            $env:SFTP_HOST = $originalHost
-            $env:SFTP_USER = $originalUser
-            $env:SFTP_KEYFILE = $originalKey
+            $env:SFTP_CONNECTION = $original
         }
     }
 
-    It "應該在缺少 SFTP_KEYFILE 時顯示錯誤" {
-        $originalHost = $env:SFTP_HOST
-        $originalUser = $env:SFTP_USER
-        $originalKey = $env:SFTP_KEYFILE
+    It "應該正確解析完整連線字串（含 port）" {
+        $original = $env:SFTP_CONNECTION
         
         try {
-            $env:SFTP_HOST = "test"
-            $env:SFTP_USER = "test"
-            $env:SFTP_KEYFILE = $null
+            # 使用不存在的主機測試解析（會在連線時失敗，但能驗證解析正確）
+            # 使用實際存在的 keyfile 路徑以通過路徑驗證
+            $env:SFTP_CONNECTION = "testuser@nonexistent.host:2222:secrets/id_ed25519"
             
             $output = & { Invoke-vSFTP -ScriptFile "test/scripts/test-upload.sftp" } 6>&1 2>&1 | Out-String
-            $output | Should -Match "SFTP_KEYFILE"
+            $output | Should -Match "testuser@nonexistent.host:2222"
         } finally {
-            $env:SFTP_HOST = $originalHost
-            $env:SFTP_USER = $originalUser
-            $env:SFTP_KEYFILE = $originalKey
+            $env:SFTP_CONNECTION = $original
         }
     }
 }
@@ -364,10 +348,7 @@ Describe "Invoke-vSFTP 整合測試" -Tag "Integration" {
         $script:ServerRunning = ($container -eq "vsftp-test-server")
         
         if ($script:ServerRunning) {
-            $env:SFTP_HOST = "localhost"
-            $env:SFTP_PORT = "2222"
-            $env:SFTP_USER = "testuser"
-            $env:SFTP_KEYFILE = "secrets/id_ed25519"
+            $env:SFTP_CONNECTION = "testuser@localhost:2222:secrets/id_ed25519"
         }
     }
 
