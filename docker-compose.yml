@@ -20,7 +20,6 @@ services:
       - ./test/remote:/home/testuser/upload
       - ./test/test_key.pub:/config/test_key.pub:ro
       - ./test/sshd_config:/etc/ssh/sshd_config:ro
-      - ./test/sshd_config.d:/etc/ssh/sshd_config.d:ro
     restart: unless-stopped
 
 volumes:

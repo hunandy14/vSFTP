@@ -91,7 +91,6 @@ function Add-HostKey {
     $hostKeys | Add-Content -Path $sshKnownHosts
     
     Write-Host "  完成" -ForegroundColor Green
-    Write-Host "  (Posh-SSH 請使用 -SkipHostKeyCheck)" -ForegroundColor Gray
 }
 
 function Stop-TestServer {
@@ -119,9 +118,7 @@ function Initialize-TestFiles {
     Write-Host "  測試檔案已建立" -ForegroundColor Green
 }
 
-function Show-Info([switch]$SkipHostKey) {
-    $skipFlag = if ($SkipHostKey) { " -SkipHostKeyCheck" } else { "" }
-    
+function Show-Info {
     Write-Host ""
     Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
     Write-Host "  vSFTP 測試環境已就緒" -ForegroundColor Cyan
@@ -136,7 +133,7 @@ function Show-Info([switch]$SkipHostKey) {
     Write-Host '    $env:SFTP_HOST="localhost"; $env:SFTP_PORT="2222"' -ForegroundColor Gray
     Write-Host '    $env:SFTP_USER="testuser"; $env:SFTP_KEYFILE="test/test_key"' -ForegroundColor Gray
     Write-Host '    Import-Module ./src/vSFTP.psd1' -ForegroundColor Gray
-    Write-Host "    Invoke-vSFTP -ScriptFile test/scripts/test-upload.sftp$skipFlag" -ForegroundColor Gray
+    Write-Host '    Invoke-vSFTP -ScriptFile test/scripts/test-upload.sftp' -ForegroundColor Gray
     Write-Host ""
     Write-Host "  關閉環境:" -ForegroundColor White
     Write-Host '    ./test/init.ps1 -Down' -ForegroundColor Gray
@@ -163,4 +160,4 @@ if (-not $SkipHostKey) {
     Add-HostKey
 }
 Initialize-TestFiles
-Show-Info -SkipHostKey:$SkipHostKey
+Show-Info

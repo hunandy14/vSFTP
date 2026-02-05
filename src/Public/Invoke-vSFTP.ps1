@@ -89,7 +89,7 @@
             $sshParams = @{
                 ComputerName = $config.Host; Port = $config.Port; KeyFile = $config.KeyFile
                 Credential = New-Object PSCredential($config.User, (New-Object SecureString))
-                ConnectionTimeout = 30; AcceptKey = $true; Force = $SkipHostKeyCheck.IsPresent
+                ConnectionTimeout = 30; AcceptKey = $true; Force = $true
             }
             $sshSession = New-SSHSession @sshParams
 
