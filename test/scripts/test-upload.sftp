@@ -1,0 +1,4 @@
+# Test: Upload files
+lcd test/local
+cd /home/testuser/upload
+put test.txt

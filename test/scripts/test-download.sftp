@@ -1,0 +1,4 @@
+# Test: Download files
+lcd test/local
+cd /home/testuser/upload
+get remote-file.txt

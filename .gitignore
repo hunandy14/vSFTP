@@ -1,0 +1,19 @@
+# PowerShell
+*.ps1xml
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test files (keep structure, ignore data)
+test/local/*
+test/remote/*
+!test/**/.gitkeep
+*.test.ps1
+
+# SSH keys (private)
+test/test_key

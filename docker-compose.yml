@@ -1,0 +1,25 @@
+# vSFTP Test Environment
+# Usage: docker compose up -d
+
+services:
+  sftp-server:
+    image: lscr.io/linuxserver/openssh-server:latest
+    container_name: vsftp-test-server
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Tokyo
+      - USER_NAME=testuser
+      - USER_PASSWORD=testpass
+      - PASSWORD_ACCESS=true
+      - SUDO_ACCESS=false
+      - PUBLIC_KEY_FILE=/config/test_key.pub
+    ports:
+      - "2222:2222"
+    volumes:
+      - ./test/remote:/home/testuser/upload
+      - ./test/test_key.pub:/config/test_key.pub:ro
+    restart: unless-stopped
+
+volumes:
+  sftp-data:
