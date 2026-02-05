@@ -19,7 +19,6 @@ services:
     volumes:
       - ./test/remote:/home/testuser/upload
       - ./test/keys:/config/keys:ro
-      - ./test/sshd_config:/etc/ssh/sshd_config:ro
     restart: unless-stopped
 
 volumes:
