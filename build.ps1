@@ -4,7 +4,15 @@
     建置 vSFTP 為單一 .ps1 檔案
 .DESCRIPTION
     合併所有函數為單一可執行腳本
+.PARAMETER StripBlockComments
+    移除函式區塊註解
+.PARAMETER StripAllComments
+    移除所有註解（區塊註解和行註解）
 #>
+param(
+    [switch]$StripBlockComments,
+    [switch]$StripAllComments
+)
 
 $ErrorActionPreference = "Stop"
 $ProjectRoot = $PSScriptRoot
@@ -39,11 +47,31 @@ $content += ""
 $content += "# Built: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
 $content += ""
 
-# 移除函式區塊註解的輔助函數
-function Remove-FunctionBlockComment {
-    param([string]$Code)
-    # 移除 <# ... #> 區塊註解（函式開頭的說明）
-    $Code -replace '(?s)<#.*?#>\s*', ''
+# 處理程式碼的輔助函數
+function Remove-Comments {
+    param(
+        [string]$Code,
+        [switch]$BlockComments,
+        [switch]$AllComments
+    )
+    
+    if ($AllComments) {
+        # 移除區塊註解
+        $Code = $Code -replace '(?s)<#.*?#>\s*', ''
+        # 移除行註解（但保留 #region/#endregion/#Requires）
+        $Code = ($Code -split "`n" | Where-Object { 
+            $_.Trim() -eq '' -or 
+            $_.Trim() -notmatch '^#' -or 
+            $_.Trim() -match '^#(region|endregion|Requires)'
+        }) -join "`n"
+        # 移除連續空行
+        $Code = $Code -replace "(`n\s*){3,}", "`n`n"
+    } elseif ($BlockComments) {
+        # 只移除區塊註解
+        $Code = $Code -replace '(?s)<#.*?#>\s*', ''
+    }
+    
+    return $Code.Trim()
 }
 
 # 私有函數
@@ -51,7 +79,7 @@ $privateFiles = if (Test-Path "$SrcDir/Private") { Get-ChildItem -Path "$SrcDir/
 foreach ($file in $privateFiles) {
     Write-Host "  + Private/$($file.Name)" -ForegroundColor Gray
     $code = (Get-Content $file.FullName -Raw).Trim()
-    $code = Remove-FunctionBlockComment $code
+    $code = Remove-Comments -Code $code -BlockComments:$StripBlockComments -AllComments:$StripAllComments
     $content += "#region $($file.BaseName)"
     $content += $code
     $content += "#endregion"
@@ -63,7 +91,7 @@ $publicFiles = if (Test-Path "$SrcDir/Public") { Get-ChildItem -Path "$SrcDir/Pu
 foreach ($file in $publicFiles) {
     Write-Host "  + Public/$($file.Name)" -ForegroundColor Gray
     $code = (Get-Content $file.FullName -Raw).Trim()
-    $code = Remove-FunctionBlockComment $code
+    $code = Remove-Comments -Code $code -BlockComments:$StripBlockComments -AllComments:$StripAllComments
     $content += "#region $($file.BaseName)"
     $content += $code
     $content += "#endregion"
