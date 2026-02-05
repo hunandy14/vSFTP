@@ -59,11 +59,11 @@ function Expand-GetOperation {
         # 根據遠端 OS 選擇展開命令
         $command = switch ($RemoteOS) {
             'Windows' {
-                # Windows: 用 PowerShell Get-ChildItem
-                # 目錄和模式都用 Base64 編碼
-                $encodedDir = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($dirPath))
-                $encodedPattern = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($pattern))
-                "powershell -NoProfile -Command `"Get-ChildItem -Path ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('$encodedDir'))) -Filter ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('$encodedPattern'))) -File | ForEach-Object { `$_.FullName }`""
+                # Windows: 用 PowerShell Get-ChildItem -Path (Join-Path)
+                # 完整路徑用 Base64 編碼，避免注入
+                $fullPattern = Join-Path $dirPath $pattern
+                $encodedPath = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($fullPattern))
+                "powershell -NoProfile -Command `"Get-ChildItem -Path ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('$encodedPath'))) -File | ForEach-Object { `$_.FullName }`""
             }
             default {
                 # Linux/macOS: 用 find
