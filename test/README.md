@@ -10,7 +10,7 @@
 $env:SFTP_HOST = "localhost"
 $env:SFTP_PORT = "2222"
 $env:SFTP_USER = "testuser"
-$env:SFTP_KEYFILE = "SECRET/id_ed25519"
+$env:SFTP_KEYFILE = "secrets/id_ed25519"
 
 # 執行測試
 Import-Module ./src/vSFTP.psd1 -Force
@@ -29,7 +29,7 @@ Invoke-vSFTP -ScriptFile test/scripts/test-wildcard.sftp
 | 主機 | localhost |
 | 連接埠 | 2222 |
 | 使用者 | testuser |
-| 認證方式 | SSH 金鑰 (SECRET/id_ed25519) |
+| 認證方式 | SSH 金鑰 (secrets/id_ed25519) |
 | 上傳目錄 | /home/testuser/upload |
 
 ## 測試檔案

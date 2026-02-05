@@ -18,7 +18,7 @@ services:
       - "2222:2222"
     volumes:
       - ./test/remote:/home/testuser/upload
-      - ./SECRET:/config/keys:ro
+      - ./secrets:/config/keys:ro
     restart: unless-stopped
 
 volumes:

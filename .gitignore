@@ -16,5 +16,5 @@ test/remote/*
 *.test.ps1
 
 # Secrets (SSH keys, credentials)
-SECRET/
+secrets/
 .env
