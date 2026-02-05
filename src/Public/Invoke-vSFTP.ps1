@@ -167,5 +167,8 @@
         if ($sshSession) { Remove-SSHSession -SessionId $sshSession.SessionId -ErrorAction SilentlyContinue | Out-Null }
     }
 
-    exit $exitCode
+    $global:LASTEXITCODE = $exitCode
+    if ($exitCode -ne 0) {
+        throw "vSFTP failed with exit code $exitCode"
+    }
 }
