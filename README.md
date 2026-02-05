@@ -50,9 +50,6 @@ Invoke-vSFTP -ScriptFile ./upload.sftp -NoVerify
 
 # 錯誤時繼續執行
 Invoke-vSFTP -ScriptFile ./upload.sftp -ContinueOnError
-
-# 跳過主機金鑰驗證（測試用）
-Invoke-vSFTP -ScriptFile ./upload.sftp -SkipHostKeyCheck
 ```
 
 ## 環境變數

@@ -14,7 +14,7 @@ $env:SFTP_KEYFILE = "test/test_key"
 
 # 執行測試
 Import-Module ./src/vSFTP.psd1
-Invoke-vSFTP -ScriptFile test/scripts/test-upload.sftp -SkipHostKeyCheck
+Invoke-vSFTP -ScriptFile test/scripts/test-upload.sftp
 
 # 關閉測試伺服器
 ./test/init.ps1 -Down
