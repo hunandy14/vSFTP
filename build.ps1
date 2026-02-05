@@ -39,12 +39,21 @@ $content += ""
 $content += "# Built: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
 $content += ""
 
+# 移除函式區塊註解的輔助函數
+function Remove-FunctionBlockComment {
+    param([string]$Code)
+    # 移除 <# ... #> 區塊註解（函式開頭的說明）
+    $Code -replace '(?s)<#.*?#>\s*', ''
+}
+
 # 私有函數
 $privateFiles = if (Test-Path "$SrcDir/Private") { Get-ChildItem -Path "$SrcDir/Private/*.ps1" -File } else { @() }
 foreach ($file in $privateFiles) {
     Write-Host "  + Private/$($file.Name)" -ForegroundColor Gray
+    $code = (Get-Content $file.FullName -Raw).Trim()
+    $code = Remove-FunctionBlockComment $code
     $content += "#region $($file.BaseName)"
-    $content += (Get-Content $file.FullName -Raw).Trim()
+    $content += $code
     $content += "#endregion"
     $content += ""
 }
@@ -53,8 +62,10 @@ foreach ($file in $privateFiles) {
 $publicFiles = if (Test-Path "$SrcDir/Public") { Get-ChildItem -Path "$SrcDir/Public/*.ps1" -File } else { @() }
 foreach ($file in $publicFiles) {
     Write-Host "  + Public/$($file.Name)" -ForegroundColor Gray
+    $code = (Get-Content $file.FullName -Raw).Trim()
+    $code = Remove-FunctionBlockComment $code
     $content += "#region $($file.BaseName)"
-    $content += (Get-Content $file.FullName -Raw).Trim()
+    $content += $code
     $content += "#endregion"
     $content += ""
 }
