@@ -109,8 +109,8 @@
                     default  { 'Linux' }  # 其他 Unix-like 系統當作 Linux
                 }
             } else {
-                # uname 失敗，嘗試 PowerShell 偵測 Windows
-                $psTest = Invoke-SSHCommand -SessionId $sshSession.SessionId -Command 'powershell -NoProfile -Command "Write-Output Windows"' -TimeOut 30
+                # uname 失敗，嘗試用 Test-Path 偵測 Windows（不執行命令，只檢查路徑）
+                $psTest = Invoke-SSHCommand -SessionId $sshSession.SessionId -Command "powershell -NoProfile -Command `"if (Test-Path 'C:\Windows') { 'Windows' }`"" -TimeOut 30
                 if ($psTest.ExitStatus -eq 0 -and $psTest.Output.Trim() -eq 'Windows') {
                     $remoteOS = 'Windows'
                 } else {
