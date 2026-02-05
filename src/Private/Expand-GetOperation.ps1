@@ -1,4 +1,4 @@
-﻿function Expand-GetOperation {
+function Expand-GetOperation {
     <#
     .SYNOPSIS
         展開 GET 操作中的遠端萬用字元。
@@ -32,15 +32,31 @@
             continue
         }
 
-        # 使用 ls -1 列出符合模式的檔案
-        $lsResult = Invoke-SSHCommand -SessionId $SessionId -Command "ls -1d $($op.RemotePath) 2>/dev/null" -TimeOut 60
+        # 分離目錄和檔名模式
+        $remotePath = $op.RemotePath
+        $dirPath = Split-Path $remotePath -Parent
+        $pattern = Split-Path $remotePath -Leaf
 
-        if ($lsResult.ExitStatus -ne 0 -or [string]::IsNullOrWhiteSpace($lsResult.Output)) {
+        # 驗證模式不含危險字元（只允許 * ? [ ] 和一般檔名字元）
+        if ($pattern -match '[;|$`\\<>&]') {
+            throw "Invalid pattern contains dangerous characters: $pattern"
+        }
+
+        # 目錄路徑用 Base64 編碼
+        $encodedDir = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($dirPath))
+
+        # 使用 find 安全地展開萬用字元
+        # find 的 -name 會自己處理萬用字元，不經過 shell glob
+        $command = 'find "$(echo ' + $encodedDir + ' | base64 -d)" -maxdepth 1 -name ''' + $pattern + ''' -type f 2>/dev/null | sort'
+
+        $findResult = Invoke-SSHCommand -SessionId $SessionId -Command $command -TimeOut 60
+
+        if ($findResult.ExitStatus -ne 0 -or [string]::IsNullOrWhiteSpace($findResult.Output)) {
             Write-Host "  ⚠ No files match: $($op.RemotePath)" -ForegroundColor Yellow
             continue
         }
 
-        $remoteFiles = $lsResult.Output -split "`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ }
+        $remoteFiles = $findResult.Output -split "`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ }
 
         foreach ($remoteFile in $remoteFiles) {
             $fileName = Split-Path $remoteFile -Leaf
