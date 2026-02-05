@@ -29,7 +29,7 @@ Describe "Get-RemoteFileHash" -Tag "Integration" {
         InModuleScope vSFTP {
             $session = New-SSHSession -ComputerName localhost -Port 2222 `
                 -Credential (New-Object PSCredential("testuser", (New-Object SecureString))) `
-                -KeyFile "test/test_key" -AcceptKey -Force
+                -KeyFile "test/keys/test_key" -AcceptKey -Force
 
             try {
                 $hash = Get-RemoteFileHash -SessionId $session.SessionId -RemotePath "/home/testuser/upload/remote-file.txt" -RemoteOS "Linux"

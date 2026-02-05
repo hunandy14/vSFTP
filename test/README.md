@@ -10,11 +10,13 @@
 $env:SFTP_HOST = "localhost"
 $env:SFTP_PORT = "2222"
 $env:SFTP_USER = "testuser"
-$env:SFTP_KEYFILE = "test/test_key"
+$env:SFTP_KEYFILE = "test/keys/test_key"
 
 # 執行測試
 Import-Module ./src/vSFTP.psd1 -Force
 Invoke-vSFTP -ScriptFile test/scripts/test-upload.sftp
+Invoke-vSFTP -ScriptFile test/scripts/test-download.sftp
+Invoke-vSFTP -ScriptFile test/scripts/test-wildcard.sftp
 
 # 關閉測試伺服器
 ./test/init.ps1 -Down
@@ -27,7 +29,7 @@ Invoke-vSFTP -ScriptFile test/scripts/test-upload.sftp
 | 主機 | localhost |
 | 連接埠 | 2222 |
 | 使用者 | testuser |
-| 認證方式 | SSH 金鑰 (test/test_key) |
+| 認證方式 | SSH 金鑰 (test/keys/test_key) |
 | 上傳目錄 | /home/testuser/upload |
 
 ## 測試檔案
