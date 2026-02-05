@@ -1,72 +1,72 @@
 # vSFTP
 
-SFTP with SHA256 hash verification.
+帶有 SHA256 雜湊驗證的 SFTP 工具。
 
-## Features
+## 功能
 
-- ✅ Execute standard SFTP batch scripts
-- ✅ SHA256 hash verification for all transfers
-- ✅ Support for Windows ↔ Linux bidirectional transfers
-- ✅ Auto-detect remote OS
-- ✅ Wildcard expansion support
-- ✅ Progress display
+- ✅ 執行標準 SFTP 批次腳本
+- ✅ 所有傳輸皆進行 SHA256 雜湊驗證
+- ✅ 支援 Windows ↔ Linux 雙向傳輸
+- ✅ 自動偵測遠端作業系統
+- ✅ 支援萬用字元展開
+- ✅ 顯示傳輸進度
 
-## Requirements
+## 需求
 
 - PowerShell 7+
-- [Posh-SSH](https://github.com/darkoperator/Posh-SSH) module
-- OpenSSH `sftp.exe` (included in Windows 10+ / Linux)
+- [Posh-SSH](https://github.com/darkoperator/Posh-SSH) 模組
+- OpenSSH `sftp.exe`（Windows 10+ / Linux 內建）
 
-## Installation
+## 安裝
 
 ```powershell
-# Install Posh-SSH dependency
+# 安裝 Posh-SSH 相依套件
 Install-Module -Name Posh-SSH -Scope CurrentUser
 
-# Clone vSFTP
+# 複製 vSFTP
 git clone https://github.com/yourname/vsftp.git
 cd vsftp
 
-# Import module
+# 匯入模組
 Import-Module ./vSFTP.psd1
 ```
 
-## Usage
+## 使用方式
 
 ```powershell
-# Set connection via environment variables
+# 透過環境變數設定連線資訊
 $env:SFTP_HOST = "example.com"
 $env:SFTP_USER = "username"
 $env:SFTP_KEYFILE = "~/.ssh/id_rsa"
 
-# Execute SFTP script with hash verification
+# 執行 SFTP 腳本並驗證雜湊
 Invoke-vSFTP -ScriptFile ./upload.sftp
 
-# Dry run (parse only, no execution)
+# 試執行（僅解析，不實際執行）
 Invoke-vSFTP -ScriptFile ./upload.sftp -DryRun
 
-# Skip hash verification
+# 跳過雜湊驗證
 Invoke-vSFTP -ScriptFile ./upload.sftp -NoVerify
 
-# Continue on error
+# 錯誤時繼續執行
 Invoke-vSFTP -ScriptFile ./upload.sftp -ContinueOnError
 
-# Skip host key verification (for testing)
+# 跳過主機金鑰驗證（測試用）
 Invoke-vSFTP -ScriptFile ./upload.sftp -SkipHostKeyCheck
 ```
 
-## Environment Variables
+## 環境變數
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `SFTP_HOST` | ✅ | | Remote host |
-| `SFTP_USER` | ✅ | | Username |
-| `SFTP_KEYFILE` | ✅ | | Private key path |
-| `SFTP_PORT` | | 22 | SSH port |
+| 變數 | 必要 | 預設值 | 說明 |
+|------|------|--------|------|
+| `SFTP_HOST` | ✅ | | 遠端主機 |
+| `SFTP_USER` | ✅ | | 使用者名稱 |
+| `SFTP_KEYFILE` | ✅ | | 私鑰路徑 |
+| `SFTP_PORT` | | 22 | SSH 連接埠 |
 
-## SFTP Script Format
+## SFTP 腳本格式
 
-Standard SFTP batch script format:
+標準 SFTP 批次腳本格式：
 
 ```sftp
 lcd /local/path
@@ -77,29 +77,29 @@ get report.pdf
 get *.log /local/logs/
 ```
 
-### Supported Commands
+### 支援的指令
 
-| Command | Description |
-|---------|-------------|
-| `put <local> [remote]` | Upload file (verified) |
-| `get <remote> [local]` | Download file (verified) |
-| `cd <path>` | Change remote directory |
-| `lcd <path>` | Change local directory |
-| Others | Passed to sftp.exe |
+| 指令 | 說明 |
+|------|------|
+| `put <本地> [遠端]` | 上傳檔案（會驗證） |
+| `get <遠端> [本地]` | 下載檔案（會驗證） |
+| `cd <路徑>` | 切換遠端目錄 |
+| `lcd <路徑>` | 切換本地目錄 |
+| 其他 | 傳遞給 sftp.exe |
 
-### Not Supported
+### 不支援
 
-- `reput` / `reget` (resume transfer)
+- `reput` / `reget`（續傳）
 
-## Exit Codes
+## 結束代碼
 
-| Code | Meaning |
-|------|---------|
-| 0 | Success |
-| 1 | Hash verification failed |
-| 2 | Transfer failed |
-| 3 | Connection failed |
+| 代碼 | 意義 |
+|------|------|
+| 0 | 成功 |
+| 1 | 雜湊驗證失敗 |
+| 2 | 傳輸失敗 |
+| 3 | 連線失敗 |
 
-## License
+## 授權
 
 MIT
