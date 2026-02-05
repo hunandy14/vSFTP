@@ -96,11 +96,14 @@
                 }
 
                 # 展開萬用字元
-                $localFiles = @(Get-ChildItem -Path $localPattern -File -ErrorAction SilentlyContinue)
+                try {
+                    $localFiles = @(Get-ChildItem -Path $localPattern -File -ErrorAction Stop)
+                } catch {
+                    throw "Line $lineNum : $($_.Exception.Message)"
+                }
 
                 if ($localFiles.Count -eq 0) {
-                    Write-Warning "Line $lineNum : No files match pattern: $localPattern"
-                    continue
+                    throw "Line $lineNum : No files match pattern: $localPattern"
                 }
 
                 foreach ($localFile in $localFiles) {
