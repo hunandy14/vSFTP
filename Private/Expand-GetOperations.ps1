@@ -6,8 +6,6 @@ function Expand-GetOperations {
         GET 操作陣列。
     .PARAMETER SessionId
         Posh-SSH 工作階段 ID。
-    .OUTPUTS
-        展開後的操作陣列。
     #>
     [CmdletBinding()]
     param(
@@ -29,30 +27,34 @@ function Expand-GetOperations {
     $expandedOps = @()
     
     foreach ($op in $Operations) {
-        if ($op.HasWildcard) {
-            $remoteFiles = Expand-RemoteWildcard -SessionId $SessionId -RemotePath $op.RemotePath
-            
-            if ($remoteFiles.Count -eq 0) {
-                Write-Host "  ⚠ No files match: $($op.RemotePath)" -ForegroundColor Yellow
-                continue
-            }
-            
-            foreach ($remoteFile in $remoteFiles) {
-                $fileName = Split-Path $remoteFile -Leaf
-                $localDir = Split-Path $op.LocalPath -Parent
-                $localPath = Join-Path $localDir $fileName
-                
-                $expandedOps += [PSCustomObject]@{
-                    Action      = 'get'
-                    LocalPath   = $localPath
-                    RemotePath  = $remoteFile
-                    Line        = $op.Line
-                    HasWildcard = $false
-                }
-                Write-Host "  $($op.RemotePath) → $remoteFile" -ForegroundColor Gray
-            }
-        } else {
+        if (-not $op.HasWildcard) {
             $expandedOps += $op
+            continue
+        }
+        
+        # 使用 ls -1 列出符合模式的檔案
+        $lsResult = Invoke-SSHCommand -SessionId $SessionId -Command "ls -1d $($op.RemotePath) 2>/dev/null" -TimeOut 60
+        
+        if ($lsResult.ExitStatus -ne 0 -or [string]::IsNullOrWhiteSpace($lsResult.Output)) {
+            Write-Host "  ⚠ No files match: $($op.RemotePath)" -ForegroundColor Yellow
+            continue
+        }
+        
+        $remoteFiles = $lsResult.Output -split "`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ }
+        
+        foreach ($remoteFile in $remoteFiles) {
+            $fileName = Split-Path $remoteFile -Leaf
+            $localDir = Split-Path $op.LocalPath -Parent
+            $localPath = Join-Path $localDir $fileName
+            
+            $expandedOps += [PSCustomObject]@{
+                Action      = 'get'
+                LocalPath   = $localPath
+                RemotePath  = $remoteFile
+                Line        = $op.Line
+                HasWildcard = $false
+            }
+            Write-Host "  $($op.RemotePath) → $remoteFile" -ForegroundColor Gray
         }
     }
     
