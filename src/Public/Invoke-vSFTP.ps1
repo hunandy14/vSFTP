@@ -91,7 +91,7 @@
                 Credential = New-Object PSCredential($config.User, (New-Object SecureString))
                 ConnectionTimeout = 30; AcceptKey = $true; Force = $true
             }
-            $sshSession = New-SSHSession @sshParams
+            $sshSession = New-SSHSession @sshParams -WarningAction SilentlyContinue
 
             if (-not $sshSession) {
                 Write-Host "✗ SSH failed" -ForegroundColor Red
