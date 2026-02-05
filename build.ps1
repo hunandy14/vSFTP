@@ -40,7 +40,7 @@ $content += "# Built: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
 $content += ""
 
 # 私有函數
-$privateFiles = Get-ChildItem -Path "$SrcDir/Private/*.ps1" -ErrorAction SilentlyContinue
+$privateFiles = if (Test-Path "$SrcDir/Private") { Get-ChildItem -Path "$SrcDir/Private/*.ps1" -File } else { @() }
 foreach ($file in $privateFiles) {
     Write-Host "  + Private/$($file.Name)" -ForegroundColor Gray
     $content += "#region $($file.BaseName)"
@@ -50,7 +50,7 @@ foreach ($file in $privateFiles) {
 }
 
 # 公開函數
-$publicFiles = Get-ChildItem -Path "$SrcDir/Public/*.ps1" -ErrorAction SilentlyContinue
+$publicFiles = if (Test-Path "$SrcDir/Public") { Get-ChildItem -Path "$SrcDir/Public/*.ps1" -File } else { @() }
 foreach ($file in $publicFiles) {
     Write-Host "  + Public/$($file.Name)" -ForegroundColor Gray
     $content += "#region $($file.BaseName)"
