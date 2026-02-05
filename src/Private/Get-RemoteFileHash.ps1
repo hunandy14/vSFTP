@@ -1,4 +1,4 @@
-﻿function Get-RemoteFileHash {
+function Get-RemoteFileHash {
     <#
     .SYNOPSIS
         透過 SSH 計算遠端檔案的 SHA256 雜湊。
@@ -22,16 +22,20 @@
         [string]$RemoteOS
     )
 
+    # Base64 編碼路徑，防止命令注入
+    $encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($RemotePath))
+
     # 根據作業系統選擇雜湊指令
     $command = switch ($RemoteOS) {
         'Linux' {
-            "sha256sum '$RemotePath' | cut -d' ' -f1"
+            'sha256sum "$(echo ' + $encoded + ' | base64 -d)" | cut -d'' '' -f1'
         }
         'macOS' {
-            "shasum -a 256 '$RemotePath' | cut -d' ' -f1"
+            'shasum -a 256 "$(echo ' + $encoded + ' | base64 -d)" | cut -d'' '' -f1'
         }
         'Windows' {
-            "powershell -NoProfile -Command `"(Get-FileHash -Path '$RemotePath' -Algorithm SHA256).Hash`""
+            # Windows PowerShell 使用 .NET 解碼
+            "powershell -NoProfile -Command `"(Get-FileHash -Path ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('$encoded'))) -Algorithm SHA256).Hash`""
         }
     }
 
