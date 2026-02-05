@@ -34,102 +34,105 @@ function Invoke-vSFTP {
         [switch]$SkipHostKeyCheck
     )
     
-    # 結束代碼
-    $EXIT_SUCCESS = 0
-    $EXIT_VERIFY_FAILED = 1
-    $EXIT_TRANSFER_FAILED = 2
-    $EXIT_CONNECTION_FAILED = 3
+    # 結束代碼常數
+    $script:EXIT_SUCCESS = 0
+    $script:EXIT_VERIFY_FAILED = 1
+    $script:EXIT_TRANSFER_FAILED = 2
+    $script:EXIT_CONNECTION_FAILED = 3
     
     # 逾時設定
     $CONNECTION_TIMEOUT = 30
-    $COMMAND_TIMEOUT = 300
     
-    #region 驗證環境變數
-    Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
-    Write-Host "  vSFTP - SFTP with Hash Verification" -ForegroundColor Cyan
-    Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
-    Write-Host ""
-    
-    $sftpHost = $env:SFTP_HOST
-    $sftpUser = $env:SFTP_USER
-    $sftpPort = if ($env:SFTP_PORT) { [int]$env:SFTP_PORT } else { 22 }
-    $sftpKeyFile = $env:SFTP_KEYFILE
-    
-    if (-not $sftpHost) {
-        Write-Host "✗ SFTP_HOST environment variable not set" -ForegroundColor Red
-        exit $EXIT_CONNECTION_FAILED
-    }
-    if (-not $sftpUser) {
-        Write-Host "✗ SFTP_USER environment variable not set" -ForegroundColor Red
-        exit $EXIT_CONNECTION_FAILED
-    }
-    if (-not $sftpKeyFile) {
-        Write-Host "✗ SFTP_KEYFILE environment variable not set" -ForegroundColor Red
-        exit $EXIT_CONNECTION_FAILED
-    }
-    
-    Write-Host "Host: $sftpUser@$sftpHost`:$sftpPort" -ForegroundColor Gray
-    Write-Host "Auth: Key ($sftpKeyFile)" -ForegroundColor Gray
-    Write-Host ""
-    #endregion
-    
-    #region 解析腳本
-    Write-Host "► Parsing script: $ScriptFile" -ForegroundColor Yellow
-    
-    if (-not (Test-Path $ScriptFile)) {
-        Write-Host "✗ Script file not found: $ScriptFile" -ForegroundColor Red
-        exit $EXIT_TRANSFER_FAILED
-    }
+    # 追蹤 SSH session（用於 finally 清理）
+    $sshSession = $null
+    $exitCode = $EXIT_SUCCESS
     
     try {
-        $operations = Parse-SftpScript -ScriptFile $ScriptFile -Verbose:$VerbosePreference
-    } catch {
-        Write-Host "✗ Failed to parse script: $_" -ForegroundColor Red
-        exit $EXIT_TRANSFER_FAILED
-    }
-    
-    $putOps = @($operations | Where-Object { $_.Action -eq 'put' })
-    $getOps = @($operations | Where-Object { $_.Action -eq 'get' })
-    
-    Write-Host "  Found $($putOps.Count) PUT operations" -ForegroundColor Gray
-    Write-Host "  Found $($getOps.Count) GET operations" -ForegroundColor Gray
-    Write-Host ""
-    
-    if ($operations.Count -eq 0) {
-        Write-Host "✗ No transfer operations found in script" -ForegroundColor Red
-        exit $EXIT_TRANSFER_FAILED
-    }
-    #endregion
-    
-    #region 試執行模式
-    if ($DryRun) {
-        Write-Host "► Dry Run - Operations that would be performed:" -ForegroundColor Yellow
+        #region 顯示標題
+        Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+        Write-Host "  vSFTP - SFTP with Hash Verification" -ForegroundColor Cyan
+        Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
         Write-Host ""
-        foreach ($op in $operations) {
-            $arrow = if ($op.Action -eq 'put') { '→' } else { '←' }
-            Write-Host "  [$($op.Action.ToUpper())] $($op.LocalPath) $arrow $($op.RemotePath)" -ForegroundColor Cyan
+        #endregion
+        
+        #region 驗證環境變數
+        $missingVars = Test-Environment
+        if ($missingVars.Count -gt 0) {
+            foreach ($var in $missingVars) {
+                Write-Host "✗ $var environment variable not set" -ForegroundColor Red
+            }
+            $exitCode = $EXIT_CONNECTION_FAILED
+            return
         }
+        
+        $sftpHost = $env:SFTP_HOST
+        $sftpUser = $env:SFTP_USER
+        $sftpPort = if ($env:SFTP_PORT) { [int]$env:SFTP_PORT } else { 22 }
+        $sftpKeyFile = $env:SFTP_KEYFILE
+        
+        Write-Host "Host: $sftpUser@$sftpHost`:$sftpPort" -ForegroundColor Gray
+        Write-Host "Auth: Key ($sftpKeyFile)" -ForegroundColor Gray
         Write-Host ""
-        Write-Host "Dry run complete. No files transferred." -ForegroundColor Green
-        exit $EXIT_SUCCESS
-    }
-    #endregion
-    
-    #region 建立 SSH 連線（用於雜湊驗證）
-    $sshSession = $null
-    $remoteOS = $null
-    
-    if (-not $NoVerify) {
-        Write-Host "► Connecting SSH for hash verification..." -ForegroundColor Yellow
+        #endregion
+        
+        #region 解析腳本
+        Write-Host "► Parsing script: $ScriptFile" -ForegroundColor Yellow
+        
+        if (-not (Test-Path $ScriptFile)) {
+            Write-Host "✗ Script file not found: $ScriptFile" -ForegroundColor Red
+            $exitCode = $EXIT_TRANSFER_FAILED
+            return
+        }
         
         try {
+            $operations = Parse-SftpScript -ScriptFile $ScriptFile -Verbose:$VerbosePreference
+        } catch {
+            Write-Host "✗ Failed to parse script: $_" -ForegroundColor Red
+            $exitCode = $EXIT_TRANSFER_FAILED
+            return
+        }
+        
+        $putOps = @($operations | Where-Object { $_.Action -eq 'put' })
+        $getOps = @($operations | Where-Object { $_.Action -eq 'get' })
+        
+        Write-Host "  Found $($putOps.Count) PUT operations" -ForegroundColor Gray
+        Write-Host "  Found $($getOps.Count) GET operations" -ForegroundColor Gray
+        Write-Host ""
+        
+        if ($operations.Count -eq 0) {
+            Write-Host "✗ No transfer operations found in script" -ForegroundColor Red
+            $exitCode = $EXIT_TRANSFER_FAILED
+            return
+        }
+        #endregion
+        
+        #region 試執行模式
+        if ($DryRun) {
+            Write-Host "► Dry Run - Operations that would be performed:" -ForegroundColor Yellow
+            Write-Host ""
+            foreach ($op in $operations) {
+                $arrow = if ($op.Action -eq 'put') { '→' } else { '←' }
+                Write-Host "  [$($op.Action.ToUpper())] $($op.LocalPath) $arrow $($op.RemotePath)" -ForegroundColor Cyan
+            }
+            Write-Host ""
+            Write-Host "Dry run complete. No files transferred." -ForegroundColor Green
+            return
+        }
+        #endregion
+        
+        #region 建立 SSH 連線（用於雜湊驗證）
+        $remoteOS = $null
+        
+        if (-not $NoVerify) {
+            Write-Host "► Connecting SSH for hash verification..." -ForegroundColor Yellow
+            
             $sshParams = @{
-                ComputerName = $sftpHost
-                Port         = $sftpPort
-                Credential   = New-Object PSCredential($sftpUser, (New-Object SecureString))
-                KeyFile      = $sftpKeyFile
+                ComputerName      = $sftpHost
+                Port              = $sftpPort
+                Credential        = New-Object PSCredential($sftpUser, (New-Object SecureString))
+                KeyFile           = $sftpKeyFile
                 ConnectionTimeout = $CONNECTION_TIMEOUT
-                AcceptKey    = $true
+                AcceptKey         = $true
             }
             
             if ($SkipHostKeyCheck) {
@@ -139,7 +142,9 @@ function Invoke-vSFTP {
             $sshSession = New-SSHSession @sshParams
             
             if (-not $sshSession) {
-                throw "Failed to create SSH session"
+                Write-Host "✗ SSH connection failed: Failed to create SSH session" -ForegroundColor Red
+                $exitCode = $EXIT_CONNECTION_FAILED
+                return
             }
             
             Write-Host "  Connected (Session $($sshSession.SessionId))" -ForegroundColor Gray
@@ -148,206 +153,176 @@ function Invoke-vSFTP {
             $remoteOS = Get-RemoteOS -SessionId $sshSession.SessionId
             Write-Host "  Remote OS: $remoteOS" -ForegroundColor Gray
             Write-Host ""
-            
-        } catch {
-            Write-Host "✗ SSH connection failed: $_" -ForegroundColor Red
-            exit $EXIT_CONNECTION_FAILED
         }
-    }
-    #endregion
-    
-    #region 展開遠端萬用字元（GET 操作）
-    if ($getOps.Count -gt 0) {
-        $wildcardOps = @($getOps | Where-Object { $_.HasWildcard })
+        #endregion
         
-        if ($wildcardOps.Count -gt 0 -and $sshSession) {
-            Write-Host "► Expanding remote wildcards..." -ForegroundColor Yellow
+        #region 展開遠端萬用字元（GET 操作）
+        if ($getOps.Count -gt 0 -and $sshSession) {
+            $wildcardOps = @($getOps | Where-Object { $_.HasWildcard })
             
-            $expandedOps = @()
-            foreach ($op in $getOps) {
-                if ($op.HasWildcard) {
-                    $remoteFiles = Expand-RemoteWildcard -SessionId $sshSession.SessionId -RemotePath $op.RemotePath
-                    
-                    if ($remoteFiles.Count -eq 0) {
-                        Write-Host "  ⚠ No files match: $($op.RemotePath)" -ForegroundColor Yellow
-                        continue
-                    }
-                    
-                    foreach ($remoteFile in $remoteFiles) {
-                        $fileName = Split-Path $remoteFile -Leaf
-                        $localDir = Split-Path $op.LocalPath -Parent
-                        $localPath = Join-Path $localDir $fileName
+            if ($wildcardOps.Count -gt 0) {
+                Write-Host "► Expanding remote wildcards..." -ForegroundColor Yellow
+                
+                $expandedOps = @()
+                foreach ($op in $getOps) {
+                    if ($op.HasWildcard) {
+                        $remoteFiles = Expand-RemoteWildcard -SessionId $sshSession.SessionId -RemotePath $op.RemotePath
                         
-                        $expandedOps += [PSCustomObject]@{
-                            Action      = 'get'
-                            LocalPath   = $localPath
-                            RemotePath  = $remoteFile
-                            Line        = $op.Line
-                            HasWildcard = $false
+                        if ($remoteFiles.Count -eq 0) {
+                            Write-Host "  ⚠ No files match: $($op.RemotePath)" -ForegroundColor Yellow
+                            continue
                         }
-                        Write-Host "  $($op.RemotePath) → $remoteFile" -ForegroundColor Gray
+                        
+                        foreach ($remoteFile in $remoteFiles) {
+                            $fileName = Split-Path $remoteFile -Leaf
+                            $localDir = Split-Path $op.LocalPath -Parent
+                            $localPath = Join-Path $localDir $fileName
+                            
+                            $expandedOps += [PSCustomObject]@{
+                                Action      = 'get'
+                                LocalPath   = $localPath
+                                RemotePath  = $remoteFile
+                                Line        = $op.Line
+                                HasWildcard = $false
+                            }
+                            Write-Host "  $($op.RemotePath) → $remoteFile" -ForegroundColor Gray
+                        }
+                    } else {
+                        $expandedOps += $op
                     }
-                } else {
-                    $expandedOps += $op
+                }
+                
+                $getOps = $expandedOps
+                Write-Host "  Expanded to $($getOps.Count) files" -ForegroundColor Gray
+                Write-Host ""
+            }
+        }
+        #endregion
+        
+        #region 傳輸前：取得 GET 操作的遠端雜湊
+        $remoteHashes = @{}
+        
+        if (-not $NoVerify -and $getOps.Count -gt 0) {
+            Write-Host "► Getting remote hashes for GET operations..." -ForegroundColor Yellow
+            
+            foreach ($op in $getOps) {
+                try {
+                    $hash = Get-RemoteFileHash -SessionId $sshSession.SessionId -RemotePath $op.RemotePath -RemoteOS $remoteOS
+                    $remoteHashes[$op.RemotePath] = $hash
+                    Write-Host "  $($op.RemotePath): $($hash.Substring(0,16))..." -ForegroundColor Gray
+                } catch {
+                    Write-Host "  ✗ $($op.RemotePath): $_" -ForegroundColor Red
+                    if (-not $ContinueOnError) {
+                        $exitCode = $EXIT_VERIFY_FAILED
+                        return
+                    }
                 }
             }
-            
-            $getOps = $expandedOps
-            Write-Host "  Expanded to $($getOps.Count) files" -ForegroundColor Gray
             Write-Host ""
         }
-    }
-    #endregion
-    
-    #region 傳輸前：取得 GET 操作的遠端雜湊
-    $remoteHashes = @{}
-    
-    if (-not $NoVerify -and $getOps.Count -gt 0) {
-        Write-Host "► Getting remote hashes for GET operations..." -ForegroundColor Yellow
+        #endregion
         
-        foreach ($op in $getOps) {
-            try {
-                $hash = Get-RemoteFileHash -SessionId $sshSession.SessionId -RemotePath $op.RemotePath -RemoteOS $remoteOS
-                $remoteHashes[$op.RemotePath] = $hash
-                Write-Host "  $($op.RemotePath): $($hash.Substring(0,16))..." -ForegroundColor Gray
-            } catch {
-                Write-Host "  ✗ $($op.RemotePath): $_" -ForegroundColor Red
-                if (-not $ContinueOnError) {
-                    if ($sshSession) { Remove-SSHSession -SessionId $sshSession.SessionId | Out-Null }
-                    exit $EXIT_VERIFY_FAILED
-                }
-            }
-        }
+        #region 執行傳輸
+        Write-Host "► Executing SFTP transfer..." -ForegroundColor Yellow
         Write-Host ""
-    }
-    #endregion
-    
-    #region 執行傳輸
-    Write-Host "► Executing SFTP transfer..." -ForegroundColor Yellow
-    Write-Host ""
-    
-    try {
+        
         $sftpResult = Invoke-SftpExe -ScriptFile $ScriptFile -Host $sftpHost -User $sftpUser -Port $sftpPort -KeyFile $sftpKeyFile -SkipHostKeyCheck:$SkipHostKeyCheck -Verbose:$VerbosePreference
         
         if ($sftpResult.ExitCode -ne 0) {
             Write-Host ""
             Write-Host "✗ SFTP transfer failed (exit code: $($sftpResult.ExitCode))" -ForegroundColor Red
-            if ($sshSession) { Remove-SSHSession -SessionId $sshSession.SessionId | Out-Null }
-            exit $EXIT_TRANSFER_FAILED
+            $exitCode = $EXIT_TRANSFER_FAILED
+            return
         }
         
         Write-Host ""
         Write-Host "  Transfer completed" -ForegroundColor Gray
         Write-Host ""
+        #endregion
         
-    } catch {
-        Write-Host ""
-        Write-Host "✗ SFTP execution failed: $_" -ForegroundColor Red
-        if ($sshSession) { Remove-SSHSession -SessionId $sshSession.SessionId | Out-Null }
-        exit $EXIT_TRANSFER_FAILED
-    }
-    #endregion
-    
-    #region 雜湊驗證
-    if (-not $NoVerify) {
-        Write-Host "► Verifying file hashes..." -ForegroundColor Yellow
-        Write-Host ""
-        
-        $passed = 0
-        $failed = 0
-        
-        # 驗證 PUT 操作
-        foreach ($op in $putOps) {
-            try {
-                $localHash = Get-LocalFileHash -Path $op.LocalPath
-                $remoteHash = Get-RemoteFileHash -SessionId $sshSession.SessionId -RemotePath $op.RemotePath -RemoteOS $remoteOS
+        #region 雜湊驗證
+        if (-not $NoVerify) {
+            Write-Host "► Verifying file hashes..." -ForegroundColor Yellow
+            Write-Host ""
+            
+            $passed = 0
+            $failed = 0
+            
+            # 驗證 PUT 操作
+            foreach ($op in $putOps) {
+                $result = Test-FileHash -LocalPath $op.LocalPath -RemotePath $op.RemotePath -SessionId $sshSession.SessionId -RemoteOS $remoteOS -Action 'put'
                 
-                if ($localHash -eq $remoteHash) {
+                if ($result.Error) {
+                    Write-Host "  ✗ $($op.RemotePath) - $($result.Error)" -ForegroundColor Red
+                    $failed++
+                } elseif ($result.Success) {
                     Write-Host "  ✓ $($op.RemotePath)" -ForegroundColor Green
                     $passed++
                 } else {
                     Write-Host "  ✗ $($op.RemotePath) - HASH MISMATCH" -ForegroundColor Red
-                    Write-Host "    Local:  $localHash" -ForegroundColor Red
-                    Write-Host "    Remote: $remoteHash" -ForegroundColor Red
+                    Write-Host "    Local:  $($result.LocalHash)" -ForegroundColor Red
+                    Write-Host "    Remote: $($result.RemoteHash)" -ForegroundColor Red
                     $failed++
-                    
-                    if (-not $ContinueOnError) {
-                        Write-Host ""
-                        Write-Host "Aborting due to hash mismatch." -ForegroundColor Red
-                        if ($sshSession) { Remove-SSHSession -SessionId $sshSession.SessionId | Out-Null }
-                        exit $EXIT_VERIFY_FAILED
-                    }
                 }
-            } catch {
-                Write-Host "  ✗ $($op.RemotePath) - $_" -ForegroundColor Red
-                $failed++
                 
-                if (-not $ContinueOnError) {
-                    if ($sshSession) { Remove-SSHSession -SessionId $sshSession.SessionId | Out-Null }
-                    exit $EXIT_VERIFY_FAILED
+                if ($failed -gt 0 -and -not $ContinueOnError) {
+                    Write-Host ""
+                    Write-Host "Aborting due to hash mismatch." -ForegroundColor Red
+                    $exitCode = $EXIT_VERIFY_FAILED
+                    return
                 }
             }
-        }
-        
-        # 驗證 GET 操作
-        foreach ($op in $getOps) {
-            try {
-                $localHash = Get-LocalFileHash -Path $op.LocalPath
+            
+            # 驗證 GET 操作
+            foreach ($op in $getOps) {
                 $expectedHash = $remoteHashes[$op.RemotePath]
+                $result = Test-FileHash -LocalPath $op.LocalPath -RemotePath $op.RemotePath -ExpectedHash $expectedHash -Action 'get'
                 
-                if (-not $expectedHash) {
-                    Write-Host "  ⚠ $($op.LocalPath) - No pre-transfer hash recorded" -ForegroundColor Yellow
+                if ($result.Error) {
+                    Write-Host "  ⚠ $($op.LocalPath) - $($result.Error)" -ForegroundColor Yellow
                     continue
-                }
-                
-                if ($localHash -eq $expectedHash) {
+                } elseif ($result.Success) {
                     Write-Host "  ✓ $($op.LocalPath)" -ForegroundColor Green
                     $passed++
                 } else {
                     Write-Host "  ✗ $($op.LocalPath) - HASH MISMATCH" -ForegroundColor Red
-                    Write-Host "    Expected: $expectedHash" -ForegroundColor Red
-                    Write-Host "    Actual:   $localHash" -ForegroundColor Red
+                    Write-Host "    Expected: $($result.RemoteHash)" -ForegroundColor Red
+                    Write-Host "    Actual:   $($result.LocalHash)" -ForegroundColor Red
                     $failed++
-                    
-                    if (-not $ContinueOnError) {
-                        Write-Host ""
-                        Write-Host "Aborting due to hash mismatch." -ForegroundColor Red
-                        if ($sshSession) { Remove-SSHSession -SessionId $sshSession.SessionId | Out-Null }
-                        exit $EXIT_VERIFY_FAILED
-                    }
                 }
-            } catch {
-                Write-Host "  ✗ $($op.LocalPath) - $_" -ForegroundColor Red
-                $failed++
                 
-                if (-not $ContinueOnError) {
-                    if ($sshSession) { Remove-SSHSession -SessionId $sshSession.SessionId | Out-Null }
-                    exit $EXIT_VERIFY_FAILED
+                if ($failed -gt 0 -and -not $ContinueOnError) {
+                    Write-Host ""
+                    Write-Host "Aborting due to hash mismatch." -ForegroundColor Red
+                    $exitCode = $EXIT_VERIFY_FAILED
+                    return
                 }
             }
+            
+            # 顯示結果摘要
+            Write-Host ""
+            Write-Host "───────────────────────────────────────────────────────────────" -ForegroundColor Cyan
+            Write-Host "  Summary: $passed passed, $failed failed" -ForegroundColor $(if ($failed -eq 0) { 'Green' } else { 'Red' })
+            Write-Host "───────────────────────────────────────────────────────────────" -ForegroundColor Cyan
+            
+            if ($failed -gt 0) {
+                $exitCode = $EXIT_VERIFY_FAILED
+            }
+        } else {
+            Write-Host "► Hash verification skipped (-NoVerify)" -ForegroundColor Yellow
+            Write-Host ""
+            Write-Host "───────────────────────────────────────────────────────────────" -ForegroundColor Cyan
+            Write-Host "  Transfer completed (verification skipped)" -ForegroundColor Green
+            Write-Host "───────────────────────────────────────────────────────────────" -ForegroundColor Cyan
         }
+        #endregion
         
-        Write-Host ""
-        Write-Host "───────────────────────────────────────────────────────────────" -ForegroundColor Cyan
-        Write-Host "  Summary: $passed passed, $failed failed" -ForegroundColor $(if ($failed -eq 0) { 'Green' } else { 'Red' })
-        Write-Host "───────────────────────────────────────────────────────────────" -ForegroundColor Cyan
-        
-        # 清理
+    } finally {
+        # 確保 SSH session 被正確清理
         if ($sshSession) {
-            Remove-SSHSession -SessionId $sshSession.SessionId | Out-Null
+            Remove-SSHSession -SessionId $sshSession.SessionId -ErrorAction SilentlyContinue | Out-Null
         }
-        
-        if ($failed -gt 0) {
-            exit $EXIT_VERIFY_FAILED
-        }
-    } else {
-        Write-Host "► Hash verification skipped (-NoVerify)" -ForegroundColor Yellow
-        Write-Host ""
-        Write-Host "───────────────────────────────────────────────────────────────" -ForegroundColor Cyan
-        Write-Host "  Transfer completed (verification skipped)" -ForegroundColor Green
-        Write-Host "───────────────────────────────────────────────────────────────" -ForegroundColor Cyan
     }
-    #endregion
     
-    exit $EXIT_SUCCESS
+    exit $exitCode
 }
