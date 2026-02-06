@@ -30,15 +30,16 @@ function Get-RemoteFileHash {
     # 根據作業系統選擇指令：輸出兩行（1. 絕對路徑 2. Hash）
     $command = switch ($RemoteOS) {
         'Linux' {
-            'p="$(realpath "$(echo ' + $encoded + ' | base64 -d)")"; echo "$p"; sha256sum "$p" | cut -d'' '' -f1'
+            # 解碼一次，realpath 取絕對路徑
+            'f="$(echo ' + $encoded + ' | base64 -d)"; p="$(realpath "$f")"; echo "$p"; sha256sum "$p" | cut -d'' '' -f1'
         }
         'macOS' {
-            # macOS 的 realpath 可能需要 coreutils，退而使用 cd + pwd
-            'p="$(cd "$(dirname "$(echo ' + $encoded + ' | base64 -d)")" && pwd)/$(basename "$(echo ' + $encoded + ' | base64 -d)")"; echo "$p"; shasum -a 256 "$p" | cut -d'' '' -f1'
+            # 解碼一次，cd+pwd 取絕對路徑（macOS 無 realpath）
+            'f="$(echo ' + $encoded + ' | base64 -d)"; p="$(cd "$(dirname "$f")" && pwd)/$(basename "$f")"; echo "$p"; shasum -a 256 "$p" | cut -d'' '' -f1'
         }
         'Windows' {
-            # Windows PowerShell：回傳完整路徑和 Hash
-            "powershell -NoProfile -Command `"\`$f=[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('$encoded')); (Resolve-Path \`$f).Path; (Get-FileHash -Path \`$f -Algorithm SHA256).Hash`""
+            # Windows PowerShell：Get-FileHash 已包含絕對路徑
+            "powershell -NoProfile -Command `"\`$h=Get-FileHash -Path ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('$encoded'))) -Algorithm SHA256; \`$h.Path; \`$h.Hash`""
         }
     }
 

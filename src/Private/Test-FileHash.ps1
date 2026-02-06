@@ -47,8 +47,9 @@
             return $result
         }
 
-        $result.LocalAbsPath = (Resolve-Path $LocalPath).Path
-        $result.LocalHash = (Get-FileHash -Path $LocalPath -Algorithm SHA256).Hash.ToUpper()
+        $fileHash = Get-FileHash -Path $LocalPath -Algorithm SHA256
+        $result.LocalAbsPath = $fileHash.Path
+        $result.LocalHash = $fileHash.Hash.ToUpper()
 
         if ($Action -eq 'put') {
             $remoteResult = Get-RemoteFileHash -SessionId $SessionId -RemotePath $RemotePath -RemoteOS $RemoteOS
