@@ -66,20 +66,12 @@ Describe "ConvertFrom-ConnectionString" -Tag "Unit" {
         } | Should -Throw "*Missing required fields*user*"
     }
 
-    It "應該在缺少 key 時拋出錯誤" {
-        { 
-            InModuleScope vSFTP { 
-                ConvertFrom-ConnectionString "host=example.com;user=admin" 
-            } 
-        } | Should -Throw "*Missing required fields*key*"
-    }
-
     It "應該在缺少多個欄位時列出所有缺少的欄位" {
         { 
             InModuleScope vSFTP { 
                 ConvertFrom-ConnectionString "host=example.com" 
             } 
-        } | Should -Throw "*Missing required fields*user*key*"
+        } | Should -Throw "*Missing required fields*user*"
     }
 
     It "應該支援 Pipeline 輸入" {
@@ -164,5 +156,34 @@ Describe "ConvertFrom-ConnectionString" -Tag "Unit" {
         }
         
         $result.KeyFile | Should -Be "/path/to/key=test"
+    }
+
+    Context "省略 key 時自動搜尋" {
+        It "應該自動找到預設金鑰" {
+            $result = InModuleScope vSFTP {
+                Mock Get-DefaultSshKey { return '/home/user/.ssh/id_rsa' }
+                ConvertFrom-ConnectionString "host=example.com;user=admin"
+            }
+            
+            $result.KeyFile | Should -Be '/home/user/.ssh/id_rsa'
+        }
+
+        It "應該在找不到任何金鑰時拋出錯誤" {
+            { 
+                InModuleScope vSFTP { 
+                    Mock Get-DefaultSshKey { return $null }
+                    ConvertFrom-ConnectionString "host=example.com;user=admin" 
+                } 
+            } | Should -Throw "*No SSH key specified and no default key found*"
+        }
+
+        It "指定 key 時不應自動搜尋" {
+            $result = InModuleScope vSFTP {
+                Mock Get-DefaultSshKey { throw "Should not be called" }
+                ConvertFrom-ConnectionString "host=example.com;user=admin;key=/explicit/path"
+            }
+            
+            $result.KeyFile | Should -Be "/explicit/path"
+        }
     }
 }

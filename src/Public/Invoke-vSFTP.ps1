@@ -13,15 +13,19 @@
     .PARAMETER SkipHostKeyCheck
         跳過 SSH 主機金鑰驗證。
     .PARAMETER Connection
-        連線字串，格式：host=<host>;user=<user>;key=<keypath>[;port=<port>]
+        連線字串，格式：host=<host>;user=<user>[;key=<keypath>][;port=<port>]
+        key 可選，省略時按 OpenSSH 順序自動搜尋 ~/.ssh/ 下的私鑰。
         port 可選，預設 22。若未指定則從環境變數 SFTP_CONNECTION 讀取。
     .EXAMPLE
-        # 使用環境變數
-        $env:SFTP_CONNECTION = "host=example.com;user=admin;key=/home/user/.ssh/id_rsa"
+        # 最簡形式（自動找金鑰）
+        $env:SFTP_CONNECTION = "host=example.com;user=admin"
         Invoke-vSFTP -ScriptFile ./upload.sftp
     .EXAMPLE
-        # 使用參數（含 port）
-        Invoke-vSFTP -ScriptFile ./upload.sftp -Connection "host=example.com;user=admin;port=2222;key=/home/user/.ssh/id_rsa"
+        # 指定金鑰
+        Invoke-vSFTP -ScriptFile ./upload.sftp -Connection "host=example.com;user=admin;key=/home/user/.ssh/id_rsa"
+    .EXAMPLE
+        # 指定 port
+        Invoke-vSFTP -ScriptFile ./upload.sftp -Connection "host=example.com;user=admin;port=2222"
     .EXAMPLE
         # Windows 路徑
         Invoke-vSFTP -ScriptFile ./upload.sftp -Connection "host=example.com;user=admin;key=C:\Users\me\.ssh\id_rsa"
