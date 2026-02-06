@@ -1,5 +1,8 @@
 # vSFTP
 
+[![PowerShell](https://img.shields.io/badge/PowerShell-7%2B-blue.svg)](https://github.com/PowerShell/PowerShell)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 帶有 SHA256 雜湊驗證的 SFTP 工具。
 
 ## 功能
@@ -24,8 +27,8 @@
 Install-Module -Name Posh-SSH -Scope CurrentUser
 
 # 複製 vSFTP
-git clone https://github.com/yourname/vsftp.git
-cd vsftp
+git clone https://github.com/hunandy14/vSFTP.git
+cd vSFTP
 
 # 匯入模組
 Import-Module ./src/vSFTP.psd1 -Force
@@ -35,12 +38,13 @@ Import-Module ./src/vSFTP.psd1 -Force
 
 ```powershell
 # 透過環境變數設定連線資訊
-$env:SFTP_HOST = "example.com"
-$env:SFTP_USER = "username"
-$env:SFTP_KEYFILE = "~/.ssh/id_rsa"
+$env:SFTP_CONNECTION = "host=example.com;user=username;key=~/.ssh/id_rsa"
 
 # 執行 SFTP 腳本並驗證雜湊
 Invoke-vSFTP -ScriptFile ./upload.sftp
+
+# 或直接使用 -Connection 參數
+Invoke-vSFTP -ScriptFile ./upload.sftp -Connection "host=example.com;user=admin;port=2222;key=~/.ssh/id_rsa"
 
 # 試執行（僅解析，不實際執行）
 Invoke-vSFTP -ScriptFile ./upload.sftp -DryRun
@@ -52,14 +56,31 @@ Invoke-vSFTP -ScriptFile ./upload.sftp -NoVerify
 Invoke-vSFTP -ScriptFile ./upload.sftp -ContinueOnError
 ```
 
-## 環境變數
+## 連線字串
 
-| 變數 | 必要 | 預設值 | 說明 |
+格式：`host=<host>;user=<user>;key=<keypath>[;port=<port>]`
+
+| 欄位 | 必要 | 預設值 | 說明 |
 |------|------|--------|------|
-| `SFTP_HOST` | ✅ | | 遠端主機 |
-| `SFTP_USER` | ✅ | | 使用者名稱 |
-| `SFTP_KEYFILE` | ✅ | | 私鑰路徑 |
-| `SFTP_PORT` | | 22 | SSH 連接埠 |
+| `host` | ✅ | | 遠端主機 |
+| `user` | ✅ | | 使用者名稱 |
+| `key` | ✅ | | 私鑰路徑 |
+| `port` | | 22 | SSH 連接埠 |
+
+**注意：** 欄位值不能包含分號（`;`）
+
+### 範例
+
+```powershell
+# Linux 路徑
+$env:SFTP_CONNECTION = "host=192.168.1.100;user=admin;key=/home/user/.ssh/id_rsa"
+
+# Windows 路徑
+$env:SFTP_CONNECTION = "host=server.com;user=admin;key=C:\Users\me\.ssh\id_rsa"
+
+# 自訂連接埠
+$env:SFTP_CONNECTION = "host=server.com;port=2222;user=admin;key=~/.ssh/id_rsa"
+```
 
 ## SFTP 腳本格式
 
@@ -87,6 +108,21 @@ get *.log /local/logs/
 ### 不支援
 
 - `reput` / `reget`（續傳）
+
+## 建置
+
+```powershell
+# 建置為單一檔案
+./build.ps1
+
+# 移除區塊註解（較小）
+./build.ps1 -StripBlockComments
+
+# 移除所有註解和空行（最小）
+./build.ps1 -StripAllComments
+```
+
+輸出：`dist/vSFTP.ps1`
 
 ## 結束代碼
 
