@@ -5,7 +5,7 @@ BeforeAll {
 Describe "ConvertFrom-ConnectionString" -Tag "Unit" {
     It "應該解析完整連線字串" {
         $result = InModuleScope vSFTP {
-            ConvertFrom-ConnectionString "host=example.com;port=2222;user=admin;key=/path/to/key"
+            ConvertFrom-ConnectionString "HostName=example.com;Port=2222;User=admin;IdentityFile=/path/to/key"
         }
         
         $result.Host | Should -Be "example.com"
@@ -14,9 +14,9 @@ Describe "ConvertFrom-ConnectionString" -Tag "Unit" {
         $result.KeyFile | Should -Be "/path/to/key"
     }
 
-    It "應該在省略 port 時使用預設值 22" {
+    It "應該在省略 Port 時使用預設值 22" {
         $result = InModuleScope vSFTP {
-            ConvertFrom-ConnectionString "host=example.com;user=admin;key=/path/to/key"
+            ConvertFrom-ConnectionString "HostName=example.com;User=admin;IdentityFile=/path/to/key"
         }
         
         $result.Port | Should -Be 22
@@ -24,7 +24,7 @@ Describe "ConvertFrom-ConnectionString" -Tag "Unit" {
 
     It "應該支援任意欄位順序" {
         $result = InModuleScope vSFTP {
-            ConvertFrom-ConnectionString "user=admin;key=/path/to/key;host=example.com;port=22"
+            ConvertFrom-ConnectionString "User=admin;IdentityFile=/path/to/key;HostName=example.com;Port=22"
         }
         
         $result.Host | Should -Be "example.com"
@@ -34,7 +34,7 @@ Describe "ConvertFrom-ConnectionString" -Tag "Unit" {
 
     It "應該處理欄位周圍的空白" {
         $result = InModuleScope vSFTP {
-            ConvertFrom-ConnectionString "host = example.com ; user = admin ; key = /path/to/key"
+            ConvertFrom-ConnectionString "HostName = example.com ; User = admin ; IdentityFile = /path/to/key"
         }
         
         $result.Host | Should -Be "example.com"
@@ -44,39 +44,39 @@ Describe "ConvertFrom-ConnectionString" -Tag "Unit" {
 
     It "應該正確處理 Windows 路徑" {
         $result = InModuleScope vSFTP {
-            ConvertFrom-ConnectionString "host=example.com;user=admin;key=C:\Users\me\.ssh\id_rsa"
+            ConvertFrom-ConnectionString "HostName=example.com;User=admin;IdentityFile=C:\Users\me\.ssh\id_rsa"
         }
         
         $result.KeyFile | Should -Be "C:\Users\me\.ssh\id_rsa"
     }
 
-    It "應該在缺少 host 時拋出錯誤" {
+    It "應該在缺少 HostName 時拋出錯誤" {
         { 
             InModuleScope vSFTP { 
-                ConvertFrom-ConnectionString "user=admin;key=/path/to/key" 
+                ConvertFrom-ConnectionString "User=admin;IdentityFile=/path/to/key" 
             } 
-        } | Should -Throw "*Missing required fields*host*"
+        } | Should -Throw "*Missing required fields*HostName*"
     }
 
-    It "應該在缺少 user 時拋出錯誤" {
+    It "應該在缺少 User 時拋出錯誤" {
         { 
             InModuleScope vSFTP { 
-                ConvertFrom-ConnectionString "host=example.com;key=/path/to/key" 
+                ConvertFrom-ConnectionString "HostName=example.com;IdentityFile=/path/to/key" 
             } 
-        } | Should -Throw "*Missing required fields*user*"
+        } | Should -Throw "*Missing required fields*User*"
     }
 
     It "應該在缺少多個欄位時列出所有缺少的欄位" {
         { 
             InModuleScope vSFTP { 
-                ConvertFrom-ConnectionString "host=example.com" 
+                ConvertFrom-ConnectionString "HostName=example.com" 
             } 
-        } | Should -Throw "*Missing required fields*user*"
+        } | Should -Throw "*Missing required fields*User*"
     }
 
     It "應該支援 Pipeline 輸入" {
         $result = InModuleScope vSFTP {
-            "host=example.com;user=admin;key=/path/to/key" | ConvertFrom-ConnectionString
+            "HostName=example.com;User=admin;IdentityFile=/path/to/key" | ConvertFrom-ConnectionString
         }
         
         $result.Host | Should -Be "example.com"
@@ -84,7 +84,7 @@ Describe "ConvertFrom-ConnectionString" -Tag "Unit" {
 
     It "應該忽略未知的欄位" {
         $result = InModuleScope vSFTP {
-            ConvertFrom-ConnectionString "host=example.com;user=admin;key=/path/to/key;unknown=value"
+            ConvertFrom-ConnectionString "HostName=example.com;User=admin;IdentityFile=/path/to/key;unknown=value"
         }
         
         $result.Host | Should -Be "example.com"
@@ -93,7 +93,7 @@ Describe "ConvertFrom-ConnectionString" -Tag "Unit" {
 
     It "應該處理大小寫不敏感的欄位名稱" {
         $result = InModuleScope vSFTP {
-            ConvertFrom-ConnectionString "HOST=example.com;USER=admin;KEY=/path/to/key;PORT=22"
+            ConvertFrom-ConnectionString "HOSTNAME=example.com;USER=admin;IDENTITYFILE=/path/to/key;PORT=22"
         }
         
         $result.Host | Should -Be "example.com"
@@ -120,31 +120,31 @@ Describe "ConvertFrom-ConnectionString" -Tag "Unit" {
 
     It "應該在重複欄位時使用後者的值" {
         $result = InModuleScope vSFTP {
-            ConvertFrom-ConnectionString "host=first.com;user=admin;key=/path/to/key;host=second.com"
+            ConvertFrom-ConnectionString "HostName=first.com;User=admin;IdentityFile=/path/to/key;HostName=second.com"
         }
         
         $result.Host | Should -Be "second.com"
     }
 
-    It "應該在 port 非數字時拋出錯誤" {
+    It "應該在 Port 非數字時拋出錯誤" {
         { 
             InModuleScope vSFTP { 
-                ConvertFrom-ConnectionString "host=example.com;user=admin;key=/path/to/key;port=abc" 
+                ConvertFrom-ConnectionString "HostName=example.com;User=admin;IdentityFile=/path/to/key;Port=abc" 
             } 
         } | Should -Throw
     }
 
-    It "應該支援 user 包含 @ 符號" {
+    It "應該支援 User 包含 @ 符號" {
         $result = InModuleScope vSFTP {
-            ConvertFrom-ConnectionString "host=example.com;user=test@domain.com;key=/path/to/key"
+            ConvertFrom-ConnectionString "HostName=example.com;User=test@domain.com;IdentityFile=/path/to/key"
         }
         
         $result.User | Should -Be "test@domain.com"
     }
 
-    It "應該支援 key 包含空格的路徑" {
+    It "應該支援 IdentityFile 包含空格的路徑" {
         $result = InModuleScope vSFTP {
-            ConvertFrom-ConnectionString "host=example.com;user=admin;key=/path/to/my key"
+            ConvertFrom-ConnectionString "HostName=example.com;User=admin;IdentityFile=/path/to/my key"
         }
         
         $result.KeyFile | Should -Be "/path/to/my key"
@@ -152,17 +152,17 @@ Describe "ConvertFrom-ConnectionString" -Tag "Unit" {
 
     It "應該支援值包含等號" {
         $result = InModuleScope vSFTP {
-            ConvertFrom-ConnectionString "host=example.com;user=admin;key=/path/to/key=test"
+            ConvertFrom-ConnectionString "HostName=example.com;User=admin;IdentityFile=/path/to/key=test"
         }
         
         $result.KeyFile | Should -Be "/path/to/key=test"
     }
 
-    Context "省略 key 時自動搜尋" {
+    Context "省略 IdentityFile 時自動搜尋" {
         It "應該自動找到預設金鑰" {
             $result = InModuleScope vSFTP {
                 Mock Get-DefaultSshKey { return '/home/user/.ssh/id_rsa' }
-                ConvertFrom-ConnectionString "host=example.com;user=admin"
+                ConvertFrom-ConnectionString "HostName=example.com;User=admin"
             }
             
             $result.KeyFile | Should -Be '/home/user/.ssh/id_rsa'
@@ -172,15 +172,15 @@ Describe "ConvertFrom-ConnectionString" -Tag "Unit" {
             { 
                 InModuleScope vSFTP { 
                     Mock Get-DefaultSshKey { return $null }
-                    ConvertFrom-ConnectionString "host=example.com;user=admin" 
+                    ConvertFrom-ConnectionString "HostName=example.com;User=admin" 
                 } 
-            } | Should -Throw "*No SSH key specified and no default key found*"
+            } | Should -Throw "*No IdentityFile specified and no default key found*"
         }
 
-        It "指定 key 時不應自動搜尋" {
+        It "指定 IdentityFile 時不應自動搜尋" {
             $result = InModuleScope vSFTP {
                 Mock Get-DefaultSshKey { throw "Should not be called" }
-                ConvertFrom-ConnectionString "host=example.com;user=admin;key=/explicit/path"
+                ConvertFrom-ConnectionString "HostName=example.com;User=admin;IdentityFile=/explicit/path"
             }
             
             $result.KeyFile | Should -Be "/explicit/path"

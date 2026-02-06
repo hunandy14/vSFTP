@@ -20,7 +20,7 @@ Describe "Invoke-vSFTP 連線字串" -Tag "Unit" {
         $original = $env:SFTP_CONNECTION
         
         try {
-            $env:SFTP_CONNECTION = "host=localhost"
+            $env:SFTP_CONNECTION = "HostName=localhost"
             
             $output = & { Invoke-vSFTP -ScriptFile "test/scripts/test-upload.sftp" } 6>&1 2>&1 | Out-String
             $output | Should -Match "Missing required fields"
@@ -29,11 +29,11 @@ Describe "Invoke-vSFTP 連線字串" -Tag "Unit" {
         }
     }
 
-    It "應該正確解析完整連線字串（含 port）" {
+    It "應該正確解析完整連線字串（含 Port）" {
         $original = $env:SFTP_CONNECTION
         
         try {
-            $env:SFTP_CONNECTION = "host=nonexistent.host;port=2222;user=testuser;key=secrets/id_ed25519"
+            $env:SFTP_CONNECTION = "HostName=nonexistent.host;Port=2222;User=testuser;IdentityFile=secrets/id_ed25519"
             
             $output = & { Invoke-vSFTP -ScriptFile "test/scripts/test-upload.sftp" } 6>&1 2>&1 | Out-String
             $output | Should -Match "testuser@nonexistent.host:2222"
@@ -46,7 +46,7 @@ Describe "Invoke-vSFTP 連線字串" -Tag "Unit" {
         $original = $env:SFTP_CONNECTION
         
         try {
-            $env:SFTP_CONNECTION = "user=testuser;key=secrets/id_ed25519;host=order.test;port=22"
+            $env:SFTP_CONNECTION = "User=testuser;IdentityFile=secrets/id_ed25519;HostName=order.test;Port=22"
             
             $output = & { Invoke-vSFTP -ScriptFile "test/scripts/test-upload.sftp" } 6>&1 2>&1 | Out-String
             $output | Should -Match "testuser@order.test:22"
@@ -55,11 +55,11 @@ Describe "Invoke-vSFTP 連線字串" -Tag "Unit" {
         }
     }
 
-    It "應該在省略 port 時使用預設值 22" {
+    It "應該在省略 Port 時使用預設值 22" {
         $original = $env:SFTP_CONNECTION
         
         try {
-            $env:SFTP_CONNECTION = "host=default-port.test;user=testuser;key=secrets/id_ed25519"
+            $env:SFTP_CONNECTION = "HostName=default-port.test;User=testuser;IdentityFile=secrets/id_ed25519"
             
             $output = & { Invoke-vSFTP -ScriptFile "test/scripts/test-upload.sftp" } 6>&1 2>&1 | Out-String
             $output | Should -Match "testuser@default-port.test:22"
@@ -72,7 +72,7 @@ Describe "Invoke-vSFTP 連線字串" -Tag "Unit" {
         $original = $env:SFTP_CONNECTION
         
         try {
-            $env:SFTP_CONNECTION = "host=win.test;user=testuser;key=C:\Users\me\.ssh\id_rsa"
+            $env:SFTP_CONNECTION = "HostName=win.test;User=testuser;IdentityFile=C:\Users\me\.ssh\id_rsa"
             
             $output = & { Invoke-vSFTP -ScriptFile "test/scripts/test-upload.sftp" -DryRun } 6>&1 2>&1 | Out-String
             $output | Should -Match "C:\\Users\\me\\\.ssh\\id_rsa"
@@ -85,7 +85,7 @@ Describe "Invoke-vSFTP 連線字串" -Tag "Unit" {
         $original = $env:SFTP_CONNECTION
         
         try {
-            $env:SFTP_CONNECTION = "host = space.test ; user = testuser ; key = secrets/id_ed25519"
+            $env:SFTP_CONNECTION = "HostName = space.test ; User = testuser ; IdentityFile = secrets/id_ed25519"
             
             $output = & { Invoke-vSFTP -ScriptFile "test/scripts/test-upload.sftp" } 6>&1 2>&1 | Out-String
             $output | Should -Match "testuser@space.test:22"
@@ -102,7 +102,7 @@ Describe "Invoke-vSFTP 整合測試" -Tag "Integration" {
         $script:ServerRunning = ($container -eq "vsftp-test-server")
         
         if ($script:ServerRunning) {
-            $env:SFTP_CONNECTION = "host=localhost;port=2222;user=testuser;key=secrets/id_ed25519"
+            $env:SFTP_CONNECTION = "HostName=localhost;Port=2222;User=testuser;IdentityFile=secrets/id_ed25519"
         }
     }
 

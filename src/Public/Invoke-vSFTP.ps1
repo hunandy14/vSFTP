@@ -13,22 +13,23 @@
     .PARAMETER SkipHostKeyCheck
         跳過 SSH 主機金鑰驗證。
     .PARAMETER Connection
-        連線字串，格式：host=<host>;user=<user>[;key=<keypath>][;port=<port>]
-        key 可選，省略時按 OpenSSH 順序自動搜尋 ~/.ssh/ 下的私鑰。
-        port 可選，預設 22。若未指定則從環境變數 SFTP_CONNECTION 讀取。
+        連線字串，格式：HostName=<host>;User=<user>[;IdentityFile=<keypath>][;Port=<port>]
+        欄位名稱與 OpenSSH config 一致（大小寫不敏感）。
+        IdentityFile 可選，省略時按 OpenSSH 順序自動搜尋 ~/.ssh/ 下的私鑰。
+        Port 可選，預設 22。若未指定則從環境變數 SFTP_CONNECTION 讀取。
     .EXAMPLE
         # 最簡形式（自動找金鑰）
-        $env:SFTP_CONNECTION = "host=example.com;user=admin"
+        $env:SFTP_CONNECTION = "HostName=example.com;User=admin"
         Invoke-vSFTP -ScriptFile ./upload.sftp
     .EXAMPLE
         # 指定金鑰
-        Invoke-vSFTP -ScriptFile ./upload.sftp -Connection "host=example.com;user=admin;key=/home/user/.ssh/id_rsa"
+        Invoke-vSFTP -ScriptFile ./upload.sftp -Connection "HostName=example.com;User=admin;IdentityFile=/home/user/.ssh/id_rsa"
     .EXAMPLE
-        # 指定 port
-        Invoke-vSFTP -ScriptFile ./upload.sftp -Connection "host=example.com;user=admin;port=2222"
+        # 指定 Port
+        Invoke-vSFTP -ScriptFile ./upload.sftp -Connection "HostName=example.com;User=admin;Port=2222"
     .EXAMPLE
         # Windows 路徑
-        Invoke-vSFTP -ScriptFile ./upload.sftp -Connection "host=example.com;user=admin;key=C:\Users\me\.ssh\id_rsa"
+        Invoke-vSFTP -ScriptFile ./upload.sftp -Connection "HostName=example.com;User=admin;IdentityFile=C:\Users\me\.ssh\id_rsa"
     #>
     [CmdletBinding()]
     param(
