@@ -182,13 +182,19 @@
             $localName = Split-Path $op.LocalPath -Leaf
             if ($r.Success) { 
                 Write-Host "  ✓ " -ForegroundColor Green -NoNewline
-                Write-Host "$localName → $($op.RemotePath) " -NoNewline
-                Write-Host "[$shortHash]" -ForegroundColor DarkGray
+                Write-Host "$localName " -NoNewline
+                Write-Host "[$shortHash]" -ForegroundColor DarkGray -NoNewline
+                Write-Host " → $($op.RemotePath)"
                 $passed++ 
             }
-            elseif ($r.Error) { Write-Host "  ⚠ $localName → $($op.RemotePath) - $($r.Error)" -ForegroundColor Yellow }
+            elseif ($r.Error) { 
+                Write-Host "  ⚠ $localName → $($op.RemotePath)" -ForegroundColor Yellow
+                Write-Host "      $($r.Error)" -ForegroundColor Yellow
+            }
             else { 
-                Write-Host "  ✗ $localName → $($op.RemotePath) MISMATCH [local:$($r.LocalHash.Substring(0,8)) ≠ remote:$($r.RemoteHash.Substring(0,8))]" -ForegroundColor Red
+                Write-Host "  ✗ $localName → $($op.RemotePath)" -ForegroundColor Red
+                Write-Host "      local:  $($r.LocalHash)" -ForegroundColor Red
+                Write-Host "      remote: $($r.RemoteHash)" -ForegroundColor Red
                 $failed++
                 if (-not $ContinueOnError) { $exitCode = $EXIT_VERIFY_FAILED; return } 
             }
@@ -201,13 +207,19 @@
             $remoteName = Split-Path $op.RemotePath -Leaf
             if ($r.Success) { 
                 Write-Host "  ✓ " -ForegroundColor Green -NoNewline
-                Write-Host "$remoteName → $localName " -NoNewline
-                Write-Host "[$shortHash]" -ForegroundColor DarkGray
+                Write-Host "$remoteName " -NoNewline
+                Write-Host "[$shortHash]" -ForegroundColor DarkGray -NoNewline
+                Write-Host " → $localName"
                 $passed++ 
             }
-            elseif ($r.Error) { Write-Host "  ⚠ $remoteName → $localName - $($r.Error)" -ForegroundColor Yellow }
+            elseif ($r.Error) { 
+                Write-Host "  ⚠ $remoteName → $localName" -ForegroundColor Yellow
+                Write-Host "      $($r.Error)" -ForegroundColor Yellow
+            }
             else { 
-                Write-Host "  ✗ $remoteName → $localName MISMATCH [local:$($r.LocalHash.Substring(0,8)) ≠ remote:$($r.RemoteHash.Substring(0,8))]" -ForegroundColor Red
+                Write-Host "  ✗ $remoteName → $localName" -ForegroundColor Red
+                Write-Host "      local:  $($r.LocalHash)" -ForegroundColor Red
+                Write-Host "      remote: $($r.RemoteHash)" -ForegroundColor Red
                 $failed++
                 if (-not $ContinueOnError) { $exitCode = $EXIT_VERIFY_FAILED; return } 
             }
