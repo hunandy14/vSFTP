@@ -367,6 +367,198 @@ rm oldfile.txt
         }
     }
 
+    Context "選項處理（-r, -p 等）" {
+        It "put -r source dest：應該忽略 -r 選項" {
+            InModuleScope vSFTP -Parameters @{ TempDir = $TempDir } {
+                "test" | Set-Content (Join-Path $TempDir "recursive.txt")
+
+                $script = @"
+lcd $TempDir
+cd /remote
+put -r recursive.txt /upload/
+"@
+                $scriptFile = Join-Path $TempDir "test-put-r.sftp"
+                $script | Set-Content $scriptFile
+
+                $result = ConvertFrom-SftpScript -ScriptFile $scriptFile
+
+                $result | Should -HaveCount 1
+                $result[0].LocalPath | Should -BeLike "*recursive.txt"
+                $result[0].RemotePath | Should -Be "/upload/recursive.txt"
+            }
+        }
+
+        It "put -r -p source dest：應該忽略多個選項" {
+            InModuleScope vSFTP -Parameters @{ TempDir = $TempDir } {
+                "test" | Set-Content (Join-Path $TempDir "preserve.txt")
+
+                $script = @"
+lcd $TempDir
+cd /remote
+put -r -p preserve.txt /backup/
+"@
+                $scriptFile = Join-Path $TempDir "test-put-rp.sftp"
+                $script | Set-Content $scriptFile
+
+                $result = ConvertFrom-SftpScript -ScriptFile $scriptFile
+
+                $result | Should -HaveCount 1
+                $result[0].LocalPath | Should -BeLike "*preserve.txt"
+                $result[0].RemotePath | Should -Be "/backup/preserve.txt"
+            }
+        }
+
+        It "put -afpR source dest：應該忽略組合選項" {
+            InModuleScope vSFTP -Parameters @{ TempDir = $TempDir } {
+                "test" | Set-Content (Join-Path $TempDir "combo.txt")
+
+                $script = @"
+lcd $TempDir
+put -afpR combo.txt /dest/
+"@
+                $scriptFile = Join-Path $TempDir "test-put-combo.sftp"
+                $script | Set-Content $scriptFile
+
+                $result = ConvertFrom-SftpScript -ScriptFile $scriptFile
+
+                $result | Should -HaveCount 1
+                $result[0].LocalPath | Should -BeLike "*combo.txt"
+                $result[0].RemotePath | Should -Be "/dest/combo.txt"
+            }
+        }
+
+        It "put -r source（無目標）：應該使用當前遠端目錄" {
+            InModuleScope vSFTP -Parameters @{ TempDir = $TempDir } {
+                "test" | Set-Content (Join-Path $TempDir "single.txt")
+
+                $script = @"
+lcd $TempDir
+cd /uploads
+put -r single.txt
+"@
+                $scriptFile = Join-Path $TempDir "test-put-r-single.sftp"
+                $script | Set-Content $scriptFile
+
+                $result = ConvertFrom-SftpScript -ScriptFile $scriptFile
+
+                $result | Should -HaveCount 1
+                $result[0].RemotePath | Should -Be "/uploads/single.txt"
+            }
+        }
+
+        It "get -r source dest：應該忽略 -r 選項" {
+            InModuleScope vSFTP -Parameters @{ TempDir = $TempDir } {
+                $script = @"
+lcd $TempDir
+get -r /remote/dir/ localdir/
+"@
+                $scriptFile = Join-Path $TempDir "test-get-r.sftp"
+                $script | Set-Content $scriptFile
+
+                $result = ConvertFrom-SftpScript -ScriptFile $scriptFile
+
+                $result | Should -HaveCount 1
+                $result[0].RemotePath | Should -Be "/remote/dir/"
+                $result[0].LocalPath | Should -BeLike "*localdir*"
+            }
+        }
+
+        It "get -afpR source dest：應該忽略多個選項" {
+            InModuleScope vSFTP -Parameters @{ TempDir = $TempDir } {
+                $script = @"
+lcd $TempDir
+get -a -f -p -R /remote/data.txt local-data.txt
+"@
+                $scriptFile = Join-Path $TempDir "test-get-multi.sftp"
+                $script | Set-Content $scriptFile
+
+                $result = ConvertFrom-SftpScript -ScriptFile $scriptFile
+
+                $result | Should -HaveCount 1
+                $result[0].RemotePath | Should -Be "/remote/data.txt"
+                $result[0].LocalPath | Should -BeLike "*local-data.txt"
+            }
+        }
+
+        It "get -p source（無目標）：應該使用當前本地目錄" {
+            InModuleScope vSFTP -Parameters @{ TempDir = $TempDir } {
+                $script = @"
+lcd $TempDir
+cd /remote
+get -p file.txt
+"@
+                $scriptFile = Join-Path $TempDir "test-get-p-single.sftp"
+                $script | Set-Content $scriptFile
+
+                $result = ConvertFrom-SftpScript -ScriptFile $scriptFile
+
+                $result | Should -HaveCount 1
+                $result[0].RemotePath | Should -Be "/remote/file.txt"
+                $result[0].LocalPath | Should -BeLike "*$TempDir*file.txt"
+            }
+        }
+
+        It "put source（無選項）：應該正常運作" {
+            InModuleScope vSFTP -Parameters @{ TempDir = $TempDir } {
+                "test" | Set-Content (Join-Path $TempDir "normal.txt")
+
+                $script = @"
+lcd $TempDir
+cd /dest
+put normal.txt
+"@
+                $scriptFile = Join-Path $TempDir "test-put-no-opt.sftp"
+                $script | Set-Content $scriptFile
+
+                $result = ConvertFrom-SftpScript -ScriptFile $scriptFile
+
+                $result | Should -HaveCount 1
+                $result[0].RemotePath | Should -Be "/dest/normal.txt"
+            }
+        }
+
+        It "get source dest（無選項）：應該正常運作" {
+            InModuleScope vSFTP -Parameters @{ TempDir = $TempDir } {
+                $script = @"
+lcd $TempDir
+get /remote/file.txt local.txt
+"@
+                $scriptFile = Join-Path $TempDir "test-get-no-opt.sftp"
+                $script | Set-Content $scriptFile
+
+                $result = ConvertFrom-SftpScript -ScriptFile $scriptFile
+
+                $result | Should -HaveCount 1
+                $result[0].RemotePath | Should -Be "/remote/file.txt"
+                $result[0].LocalPath | Should -BeLike "*local.txt"
+            }
+        }
+
+        It "cd 和 lcd 不應受選項過濾影響" {
+            InModuleScope vSFTP -Parameters @{ TempDir = $TempDir } {
+                # 建立一個名為 -test 的目錄（邊界情況）
+                $weirdDir = Join-Path $TempDir "normaldir"
+                New-Item -ItemType Directory -Path $weirdDir -Force | Out-Null
+                "test" | Set-Content (Join-Path $weirdDir "file.txt")
+
+                $script = @"
+lcd $TempDir
+lcd normaldir
+cd /remote
+put file.txt
+"@
+                $scriptFile = Join-Path $TempDir "test-cd-lcd.sftp"
+                $script | Set-Content $scriptFile
+
+                $result = ConvertFrom-SftpScript -ScriptFile $scriptFile
+
+                $result | Should -HaveCount 1
+                $result[0].LocalPath | Should -BeLike "*normaldir*file.txt"
+                $result[0].RemotePath | Should -Be "/remote/file.txt"
+            }
+        }
+    }
+
     Context "特殊字元處理" {
         It "應該處理含空格的檔名（雙引號）" {
             InModuleScope vSFTP -Parameters @{ TempDir = $TempDir } {

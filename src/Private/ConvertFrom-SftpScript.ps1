@@ -68,8 +68,12 @@
         if ($current) { $tokens += $current }
         
         $cmd = if ($tokens.Count -gt 0) { $tokens[0].ToLower() } else { continue }
-        $arg1 = if ($tokens.Count -gt 1) { $tokens[1] } else { $null }
-        $arg2 = if ($tokens.Count -gt 2) { $tokens[2] } else { $null }
+        
+        # 過濾掉選項（-r, -p, -a, -f 等），只保留路徑參數
+        # SFTP 的 get/put 選項都是簡單 flag，沒有帶值的
+        $pathArgs = @($tokens[1..($tokens.Count - 1)] | Where-Object { $_ -notmatch '^-' })
+        $arg1 = if ($pathArgs.Count -gt 0) { $pathArgs[0] } else { $null }
+        $arg2 = if ($pathArgs.Count -gt 1) { $pathArgs[1] } else { $null }
 
         switch ($cmd) {
             'lcd' {
