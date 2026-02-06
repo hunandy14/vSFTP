@@ -114,6 +114,27 @@ get *.log /local/logs/
 
 - `reput` / `reget`（續傳）
 
+## 測試
+
+使用 Docker 啟動測試用 SFTP 伺服器：
+
+```powershell
+# 啟動測試環境
+./docker-up.ps1
+
+# 執行測試
+Invoke-Pester ./test
+
+# 關閉測試環境
+./docker-up.ps1 -Down
+```
+
+測試環境會自動：
+- 啟動 SFTP 伺服器（localhost:2222）
+- 註冊 SSH host key
+- 建立測試檔案
+- 設定 `$env:SFTP_CONNECTION`
+
 ## 建置
 
 ```powershell
