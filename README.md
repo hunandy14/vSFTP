@@ -37,14 +37,14 @@ Import-Module ./src/vSFTP.psd1 -Force
 ## 使用方式
 
 ```powershell
-# 透過環境變數設定連線資訊
-$env:SFTP_CONNECTION = "host=example.com;user=username;key=~/.ssh/id_rsa"
+# 透過環境變數設定連線資訊（最簡形式，自動找金鑰）
+$env:SFTP_CONNECTION = "host=example.com;user=username"
 
 # 執行 SFTP 腳本並驗證雜湊
 Invoke-vSFTP -ScriptFile ./upload.sftp
 
 # 或直接使用 -Connection 參數
-Invoke-vSFTP -ScriptFile ./upload.sftp -Connection "host=example.com;user=admin;port=2222;key=~/.ssh/id_rsa"
+Invoke-vSFTP -ScriptFile ./upload.sftp -Connection "host=example.com;user=admin;port=2222"
 
 # 試執行（僅解析，不實際執行）
 Invoke-vSFTP -ScriptFile ./upload.sftp -DryRun
@@ -58,28 +58,31 @@ Invoke-vSFTP -ScriptFile ./upload.sftp -ContinueOnError
 
 ## 連線字串
 
-格式：`host=<host>;user=<user>;key=<keypath>[;port=<port>]`
+格式：`host=<host>;user=<user>[;key=<keypath>][;port=<port>]`
 
 | 欄位 | 必要 | 預設值 | 說明 |
 |------|------|--------|------|
 | `host` | ✅ | | 遠端主機 |
 | `user` | ✅ | | 使用者名稱 |
-| `key` | ✅ | | 私鑰路徑 |
+| `key` | | 自動偵測 | 私鑰路徑 |
 | `port` | | 22 | SSH 連接埠 |
+
+省略 `key` 時，會按照 OpenSSH 順序自動搜尋 `~/.ssh/`：
+`id_rsa` → `id_ecdsa` → `id_ecdsa_sk` → `id_ed25519` → `id_ed25519_sk`
 
 **注意：** 欄位值不能包含分號（`;`）
 
 ### 範例
 
 ```powershell
-# Linux 路徑
-$env:SFTP_CONNECTION = "host=192.168.1.100;user=admin;key=/home/user/.ssh/id_rsa"
+# 最簡形式（自動找金鑰）
+$env:SFTP_CONNECTION = "host=192.168.1.100;user=admin"
 
-# Windows 路徑
+# 指定金鑰
 $env:SFTP_CONNECTION = "host=server.com;user=admin;key=C:\Users\me\.ssh\id_rsa"
 
 # 自訂連接埠
-$env:SFTP_CONNECTION = "host=server.com;port=2222;user=admin;key=~/.ssh/id_rsa"
+$env:SFTP_CONNECTION = "host=server.com;port=2222;user=admin"
 ```
 
 ## SFTP 腳本格式
