@@ -21,7 +21,7 @@ $ErrorActionPreference = "Stop"
 $ProjectRoot = $PSScriptRoot
 
 # 測試環境變數（統一連線字串格式）
-$env:SFTP_CONNECTION = "host=localhost;port=2222;user=testuser;key=secrets/id_ed25519"
+$env:SFTP_CONNECTION = "HostName=localhost;Port=2222;User=testuser;IdentityFile=secrets/id_ed25519"
 
 $sshKnownHosts = Join-Path $HOME ".ssh/known_hosts"
 $hostKeyEntry = "[localhost]:2222"
@@ -123,7 +123,7 @@ function Show-Info {
     Write-Host "    Key:     secrets/id_ed25519" -ForegroundColor Gray
     Write-Host ""
     Write-Host "  測試指令:" -ForegroundColor White
-    Write-Host '    $env:SFTP_CONNECTION = "host=localhost;port=2222;user=testuser;key=secrets/id_ed25519"' -ForegroundColor Gray
+    Write-Host '    $env:SFTP_CONNECTION = "HostName=localhost;Port=2222;User=testuser;IdentityFile=secrets/id_ed25519"' -ForegroundColor Gray
     Write-Host '    Import-Module ./src/vSFTP.psd1' -ForegroundColor Gray
     Write-Host '    Invoke-vSFTP -ScriptFile test/scripts/test-upload.sftp' -ForegroundColor Gray
     Write-Host ""

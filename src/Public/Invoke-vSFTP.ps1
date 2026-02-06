@@ -55,7 +55,7 @@
         
         if (-not $connStr) {
             Write-Host "✗ SFTP_CONNECTION not set" -ForegroundColor Red
-            Write-Host "  Format: host=<host>;user=<user>;key=<keypath>[;port=<port>]" -ForegroundColor Gray
+            Write-Host "  Format: HostName=<host>;User=<user>[;IdentityFile=<keypath>][;Port=<port>]" -ForegroundColor Gray
             $exitCode = $EXIT_CONNECTION_FAILED; return
         }
 
