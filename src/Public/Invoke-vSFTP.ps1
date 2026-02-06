@@ -178,12 +178,13 @@
 
         foreach ($op in $putOps) {
             $r = Test-FileHash -LocalPath $op.LocalPath -RemotePath $op.RemotePath -SessionId $sshSession.SessionId -RemoteOS $remoteOS -Action put
-            $shortHash = if ($r.LocalHash) { $r.LocalHash.Substring(0, 16) } else { "????????" }
             $localName = Split-Path $op.LocalPath -Leaf
+            $shortLocal = if ($r.LocalHash) { $r.LocalHash.Substring(0, 8) } else { "????????" }
+            $shortRemote = if ($r.RemoteHash) { $r.RemoteHash.Substring(0, 8) } else { "????????" }
             if ($r.Success) { 
                 Write-Host "  ✓ " -ForegroundColor Green -NoNewline
                 Write-Host "$localName " -NoNewline
-                Write-Host "[$shortHash]" -ForegroundColor DarkGray -NoNewline
+                Write-Host "[$shortLocal::$shortRemote]" -ForegroundColor DarkGray -NoNewline
                 Write-Host " → $($op.RemotePath)"
                 $passed++ 
             }
@@ -202,13 +203,14 @@
 
         foreach ($op in $getOps) {
             $r = Test-FileHash -LocalPath $op.LocalPath -RemotePath $op.RemotePath -ExpectedHash $remoteHashes[$op.RemotePath] -Action get
-            $shortHash = if ($r.LocalHash) { $r.LocalHash.Substring(0, 16) } else { "????????" }
             $localName = Split-Path $op.LocalPath -Leaf
             $remoteName = Split-Path $op.RemotePath -Leaf
+            $shortLocal = if ($r.LocalHash) { $r.LocalHash.Substring(0, 8) } else { "????????" }
+            $shortRemote = if ($r.RemoteHash) { $r.RemoteHash.Substring(0, 8) } else { "????????" }
             if ($r.Success) { 
                 Write-Host "  ✓ " -ForegroundColor Green -NoNewline
                 Write-Host "$remoteName " -NoNewline
-                Write-Host "[$shortHash]" -ForegroundColor DarkGray -NoNewline
+                Write-Host "[$shortRemote::$shortLocal]" -ForegroundColor DarkGray -NoNewline
                 Write-Host " → $localName"
                 $passed++ 
             }
