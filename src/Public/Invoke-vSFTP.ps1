@@ -178,18 +178,39 @@
 
         foreach ($op in $putOps) {
             $r = Test-FileHash -LocalPath $op.LocalPath -RemotePath $op.RemotePath -SessionId $sshSession.SessionId -RemoteOS $remoteOS -Action put
-            $shortHash = if ($r.LocalHash) { $r.LocalHash.Substring(0, 16) } else { "?" }
-            if ($r.Success) { Write-Host "  ✓ $($op.RemotePath) [$shortHash]" -ForegroundColor Green; $passed++ }
-            elseif ($r.Error) { Write-Host "  ⚠ $($op.RemotePath) - $($r.Error)" -ForegroundColor Yellow }
-            else { Write-Host "  ✗ $($op.RemotePath) MISMATCH [local:$($r.LocalHash.Substring(0,8)) != remote:$($r.RemoteHash.Substring(0,8))]" -ForegroundColor Red; $failed++; if (-not $ContinueOnError) { $exitCode = $EXIT_VERIFY_FAILED; return } }
+            $shortHash = if ($r.LocalHash) { $r.LocalHash.Substring(0, 16) } else { "????????" }
+            $localName = Split-Path $op.LocalPath -Leaf
+            if ($r.Success) { 
+                Write-Host "  ✓ " -ForegroundColor Green -NoNewline
+                Write-Host "$localName → $($op.RemotePath) " -NoNewline
+                Write-Host "[$shortHash]" -ForegroundColor DarkGray
+                $passed++ 
+            }
+            elseif ($r.Error) { Write-Host "  ⚠ $localName → $($op.RemotePath) - $($r.Error)" -ForegroundColor Yellow }
+            else { 
+                Write-Host "  ✗ $localName → $($op.RemotePath) MISMATCH [local:$($r.LocalHash.Substring(0,8)) ≠ remote:$($r.RemoteHash.Substring(0,8))]" -ForegroundColor Red
+                $failed++
+                if (-not $ContinueOnError) { $exitCode = $EXIT_VERIFY_FAILED; return } 
+            }
         }
 
         foreach ($op in $getOps) {
             $r = Test-FileHash -LocalPath $op.LocalPath -RemotePath $op.RemotePath -ExpectedHash $remoteHashes[$op.RemotePath] -Action get
-            $shortHash = if ($r.LocalHash) { $r.LocalHash.Substring(0, 16) } else { "?" }
-            if ($r.Success) { Write-Host "  ✓ $($op.LocalPath) [$shortHash]" -ForegroundColor Green; $passed++ }
-            elseif ($r.Error) { Write-Host "  ⚠ $($op.LocalPath) - $($r.Error)" -ForegroundColor Yellow }
-            else { Write-Host "  ✗ $($op.LocalPath) MISMATCH [local:$($r.LocalHash.Substring(0,8)) != remote:$($r.RemoteHash.Substring(0,8))]" -ForegroundColor Red; $failed++; if (-not $ContinueOnError) { $exitCode = $EXIT_VERIFY_FAILED; return } }
+            $shortHash = if ($r.LocalHash) { $r.LocalHash.Substring(0, 16) } else { "????????" }
+            $localName = Split-Path $op.LocalPath -Leaf
+            $remoteName = Split-Path $op.RemotePath -Leaf
+            if ($r.Success) { 
+                Write-Host "  ✓ " -ForegroundColor Green -NoNewline
+                Write-Host "$remoteName → $localName " -NoNewline
+                Write-Host "[$shortHash]" -ForegroundColor DarkGray
+                $passed++ 
+            }
+            elseif ($r.Error) { Write-Host "  ⚠ $remoteName → $localName - $($r.Error)" -ForegroundColor Yellow }
+            else { 
+                Write-Host "  ✗ $remoteName → $localName MISMATCH [local:$($r.LocalHash.Substring(0,8)) ≠ remote:$($r.RemoteHash.Substring(0,8))]" -ForegroundColor Red
+                $failed++
+                if (-not $ContinueOnError) { $exitCode = $EXIT_VERIFY_FAILED; return } 
+            }
         }
 
         Write-Host "`n───────────────────────────────────────────────────────────────" -ForegroundColor Cyan
