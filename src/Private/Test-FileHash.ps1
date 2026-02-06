@@ -35,6 +35,7 @@
     $result = [PSCustomObject]@{
         Success          = $false
         LocalHash        = $null
+        LocalAbsPath     = $null
         RemoteHash       = $null
         RemoteAbsPath    = $null
         Error            = $null
@@ -46,6 +47,7 @@
             return $result
         }
 
+        $result.LocalAbsPath = (Resolve-Path $LocalPath).Path
         $result.LocalHash = (Get-FileHash -Path $LocalPath -Algorithm SHA256).Hash.ToUpper()
 
         if ($Action -eq 'put') {

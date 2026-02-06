@@ -180,24 +180,24 @@
 
         foreach ($op in $putOps) {
             $r = Test-FileHash -LocalPath $op.LocalPath -RemotePath $op.RemotePath -SessionId $sshSession.SessionId -RemoteOS $remoteOS -Action put
-            $localName = Split-Path $op.LocalPath -Leaf
+            $localPath = if ($r.LocalAbsPath) { $r.LocalAbsPath } else { $op.LocalPath }
             $remotePath = if ($r.RemoteAbsPath) { $r.RemoteAbsPath } else { $op.RemotePath }
             $hashL = if ($r.LocalHash) { $r.LocalHash.Substring(0,4) + ":" + $r.LocalHash.Substring(60,4) } else { "????:????" }
             $hashR = if ($r.RemoteHash) { $r.RemoteHash.Substring(0,4) + ":" + $r.RemoteHash.Substring(60,4) } else { "????:????" }
             if ($r.Success) { 
                 Write-Host "  ✓ " -ForegroundColor Green -NoNewline
                 Write-Host "[$hashL = $hashR]" -ForegroundColor DarkGray -NoNewline
-                Write-Host " $localName → $remotePath"
+                Write-Host " $localPath → $remotePath"
                 $passed++ 
             }
             elseif ($r.Error) { 
                 Write-Host "  ⚠ " -ForegroundColor Yellow -NoNewline
-                Write-Host "[$hashL = $hashR] $localName → $remotePath - $($r.Error)" -ForegroundColor Yellow
+                Write-Host "[$hashL = $hashR] $localPath → $remotePath - $($r.Error)" -ForegroundColor Yellow
             }
             else { 
                 Write-Host "  ✗ " -ForegroundColor Red -NoNewline
                 Write-Host "[$hashL ≠ $hashR]" -ForegroundColor Red -NoNewline
-                Write-Host " $localName → $remotePath" -ForegroundColor Red
+                Write-Host " $localPath → $remotePath" -ForegroundColor Red
                 $failed++
                 if (-not $ContinueOnError) { $exitCode = $EXIT_VERIFY_FAILED; return } 
             }
@@ -205,24 +205,24 @@
 
         foreach ($op in $getOps) {
             $r = Test-FileHash -LocalPath $op.LocalPath -RemotePath $op.RemotePath -ExpectedHash $remoteHashes[$op.RemotePath] -Action get
-            $localName = Split-Path $op.LocalPath -Leaf
+            $localPath = if ($r.LocalAbsPath) { $r.LocalAbsPath } else { $op.LocalPath }
             $remotePath = if ($remotePaths[$op.RemotePath]) { $remotePaths[$op.RemotePath] } else { $op.RemotePath }
             $hashL = if ($r.LocalHash) { $r.LocalHash.Substring(0,4) + ":" + $r.LocalHash.Substring(60,4) } else { "????:????" }
             $hashR = if ($r.RemoteHash) { $r.RemoteHash.Substring(0,4) + ":" + $r.RemoteHash.Substring(60,4) } else { "????:????" }
             if ($r.Success) { 
                 Write-Host "  ✓ " -ForegroundColor Green -NoNewline
                 Write-Host "[$hashR = $hashL]" -ForegroundColor DarkGray -NoNewline
-                Write-Host " $localName ← $remotePath"
+                Write-Host " $localPath ← $remotePath"
                 $passed++ 
             }
             elseif ($r.Error) { 
                 Write-Host "  ⚠ " -ForegroundColor Yellow -NoNewline
-                Write-Host "[$hashR = $hashL] $localName ← $remotePath - $($r.Error)" -ForegroundColor Yellow
+                Write-Host "[$hashR = $hashL] $localPath ← $remotePath - $($r.Error)" -ForegroundColor Yellow
             }
             else { 
                 Write-Host "  ✗ " -ForegroundColor Red -NoNewline
                 Write-Host "[$hashR ≠ $hashL]" -ForegroundColor Red -NoNewline
-                Write-Host " $localName ← $remotePath" -ForegroundColor Red
+                Write-Host " $localPath ← $remotePath" -ForegroundColor Red
                 $failed++
                 if (-not $ContinueOnError) { $exitCode = $EXIT_VERIFY_FAILED; return } 
             }
