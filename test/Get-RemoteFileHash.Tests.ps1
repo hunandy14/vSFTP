@@ -21,15 +21,16 @@ Describe "Get-RemoteFileHash" -Tag "Integration" {
         }
     }
 
-    It "應該取得 Linux 檔案的 SHA256 雜湊" {
+    It "應該取得 Linux 檔案的 SHA256 雜湊和絕對路徑" {
         if (-not $script:ServerRunning) {
             Set-ItResult -Skipped -Because "測試伺服器未運行"
             return
         }
 
         InModuleScope vSFTP -Parameters @{ SessionId = $script:Session.SessionId } {
-            $hash = Get-RemoteFileHash -SessionId $SessionId -RemotePath "/home/testuser/upload/remote-file.txt" -RemoteOS "Linux"
-            $hash | Should -Match "^[A-F0-9]{64}$"
+            $result = Get-RemoteFileHash -SessionId $SessionId -RemotePath "/home/testuser/upload/remote-file.txt" -RemoteOS "Linux"
+            $result.Hash | Should -Match "^[A-F0-9]{64}$"
+            $result.AbsolutePath | Should -Be "/home/testuser/upload/remote-file.txt"
         }
     }
 
@@ -40,9 +41,10 @@ Describe "Get-RemoteFileHash" -Tag "Integration" {
         }
 
         InModuleScope vSFTP -Parameters @{ SessionId = $script:Session.SessionId } {
-            $hash = Get-RemoteFileHash -SessionId $SessionId -RemotePath "/home/testuser/upload/access.log" -RemoteOS "Linux"
-            $hash | Should -Match "^[A-F0-9]{64}$"
-            $hash.Length | Should -Be 64
+            $result = Get-RemoteFileHash -SessionId $SessionId -RemotePath "/home/testuser/upload/access.log" -RemoteOS "Linux"
+            $result.Hash | Should -Match "^[A-F0-9]{64}$"
+            $result.Hash.Length | Should -Be 64
+            $result.AbsolutePath | Should -BeLike "/home/testuser/upload/access.log"
         }
     }
 

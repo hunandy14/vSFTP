@@ -86,6 +86,7 @@ Describe "Test-FileHash" -Tag "Unit" {
             $result.PSObject.Properties.Name | Should -Contain "Success"
             $result.PSObject.Properties.Name | Should -Contain "LocalHash"
             $result.PSObject.Properties.Name | Should -Contain "RemoteHash"
+            $result.PSObject.Properties.Name | Should -Contain "RemoteAbsPath"
             $result.PSObject.Properties.Name | Should -Contain "Error"
         }
     }
