@@ -183,20 +183,18 @@
             $hashR = if ($r.RemoteHash) { $r.RemoteHash.Substring(0,4) + ":" + $r.RemoteHash.Substring(60,4) } else { "????:????" }
             if ($r.Success) { 
                 Write-Host "  ✓ " -ForegroundColor Green -NoNewline
-                Write-Host "$localName " -NoNewline
-                Write-Host "[$hashL → $hashR]" -ForegroundColor DarkGray -NoNewline
-                Write-Host " $($op.RemotePath)"
+                Write-Host "[$hashL = $hashR]" -ForegroundColor DarkGray -NoNewline
+                Write-Host " $localName → $($op.RemotePath)"
                 $passed++ 
             }
             elseif ($r.Error) { 
                 Write-Host "  ⚠ " -ForegroundColor Yellow -NoNewline
-                Write-Host "$localName [$hashL → $hashR] $($op.RemotePath) - $($r.Error)" -ForegroundColor Yellow
+                Write-Host "[$hashL = $hashR] $localName → $($op.RemotePath) - $($r.Error)" -ForegroundColor Yellow
             }
             else { 
                 Write-Host "  ✗ " -ForegroundColor Red -NoNewline
-                Write-Host "$localName " -ForegroundColor Red -NoNewline
-                Write-Host "[$hashL → $hashR]" -ForegroundColor Red -NoNewline
-                Write-Host " $($op.RemotePath)" -ForegroundColor Red
+                Write-Host "[$hashL ≠ $hashR]" -ForegroundColor Red -NoNewline
+                Write-Host " $localName → $($op.RemotePath)" -ForegroundColor Red
                 $failed++
                 if (-not $ContinueOnError) { $exitCode = $EXIT_VERIFY_FAILED; return } 
             }
@@ -209,20 +207,18 @@
             $hashR = if ($r.RemoteHash) { $r.RemoteHash.Substring(0,4) + ":" + $r.RemoteHash.Substring(60,4) } else { "????:????" }
             if ($r.Success) { 
                 Write-Host "  ✓ " -ForegroundColor Green -NoNewline
-                Write-Host "$localName " -NoNewline
-                Write-Host "[$hashR ← $hashL]" -ForegroundColor DarkGray -NoNewline
-                Write-Host " $($op.RemotePath)"
+                Write-Host "[$hashR = $hashL]" -ForegroundColor DarkGray -NoNewline
+                Write-Host " $localName ← $($op.RemotePath)"
                 $passed++ 
             }
             elseif ($r.Error) { 
                 Write-Host "  ⚠ " -ForegroundColor Yellow -NoNewline
-                Write-Host "$localName [$hashR ← $hashL] $($op.RemotePath) - $($r.Error)" -ForegroundColor Yellow
+                Write-Host "[$hashR = $hashL] $localName ← $($op.RemotePath) - $($r.Error)" -ForegroundColor Yellow
             }
             else { 
                 Write-Host "  ✗ " -ForegroundColor Red -NoNewline
-                Write-Host "$localName " -ForegroundColor Red -NoNewline
-                Write-Host "[$hashR ← $hashL]" -ForegroundColor Red -NoNewline
-                Write-Host " $($op.RemotePath)" -ForegroundColor Red
+                Write-Host "[$hashR ≠ $hashL]" -ForegroundColor Red -NoNewline
+                Write-Host " $localName ← $($op.RemotePath)" -ForegroundColor Red
                 $failed++
                 if (-not $ContinueOnError) { $exitCode = $EXIT_VERIFY_FAILED; return } 
             }
