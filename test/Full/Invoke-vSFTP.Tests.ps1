@@ -1,5 +1,5 @@
 BeforeAll {
-    Import-Module "$PSScriptRoot/../src/vSFTP.psd1" -Force
+    Import-Module "$PSScriptRoot/../../src/vSFTP.psd1" -Force
 }
 
 Describe "Invoke-vSFTP 連線字串" -Tag "Unit" {

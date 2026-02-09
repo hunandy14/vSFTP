@@ -1,29 +1,17 @@
-#Requires -Version 7.0
-#Requires -Modules Posh-SSH
+# vSFTP 模組（測試用）
+# 根據 VSFTP_VARIANT 環境變數載入 Full 或 Lite 版本
 
-# 匯入私有函數
-$PrivatePath = "$PSScriptRoot/Private"
-if (Test-Path $PrivatePath) {
-    foreach ($file in Get-ChildItem -Path "$PrivatePath/*.ps1" -File) {
-        try {
-            . $file.FullName
-        } catch {
-            throw "Failed to import $($file.FullName): $_"
-        }
-    }
+$variant = if ($env:VSFTP_VARIANT -eq 'Lite') { 'Lite' } else { 'Full' }
+
+# 載入共用函數
+Get-ChildItem -Path "$PSScriptRoot/Common/*.ps1" -File | ForEach-Object {
+    . $_.FullName
 }
 
-# 匯入公開函數
-$PublicPath = "$PSScriptRoot/Public"
-if (Test-Path $PublicPath) {
-    $Public = Get-ChildItem -Path "$PublicPath/*.ps1" -File
-    foreach ($file in $Public) {
-        try {
-            . $file.FullName
-        } catch {
-            throw "Failed to import $($file.FullName): $_"
-        }
-    }
-    # 匯出公開函數
-    Export-ModuleMember -Function $Public.BaseName
+# 載入版本專用函數
+Get-ChildItem -Path "$PSScriptRoot/$variant/*.ps1" -File | ForEach-Object {
+    . $_.FullName
 }
+
+# 匯出公開函數
+Export-ModuleMember -Function Invoke-vSFTP

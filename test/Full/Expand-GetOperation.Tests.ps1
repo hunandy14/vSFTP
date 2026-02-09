@@ -1,5 +1,5 @@
 BeforeAll {
-    Import-Module "$PSScriptRoot/../src/vSFTP.psd1" -Force
+    Import-Module "$PSScriptRoot/../../src/vSFTP.psd1" -Force
 }
 
 Describe "Expand-GetOperation 模式驗證" -Tag "Unit" {

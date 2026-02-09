@@ -1,6 +1,6 @@
 BeforeAll {
     # 匯入模組
-    $ModulePath = Join-Path $PSScriptRoot "../src/vSFTP.psd1"
+    $ModulePath = Join-Path $PSScriptRoot "../../src/vSFTP.psd1"
     Import-Module $ModulePath -Force
 }
 

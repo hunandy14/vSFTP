@@ -1,5 +1,5 @@
 BeforeAll {
-    . "$PSScriptRoot/../src/Private/Get-DefaultSshKey.ps1"
+    . "$PSScriptRoot/../../src/Common/Get-DefaultSshKey.ps1"
 }
 
 Describe 'Get-DefaultSshKey' {
