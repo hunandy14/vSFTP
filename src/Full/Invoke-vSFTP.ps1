@@ -237,10 +237,11 @@
         if ($sshSession) { 
             try { Remove-SSHSession -SessionId $sshSession.SessionId | Out-Null } catch { }
         }
-    }
-
-    $global:LASTEXITCODE = $exitCode
-    if ($exitCode -ne 0) {
-        throw "vSFTP failed with exit code $exitCode"
+        
+        # 設定結束代碼（即使 return 提前結束也會執行）
+        $global:LASTEXITCODE = $exitCode
+        if ($exitCode -ne 0) {
+            throw "vSFTP failed with exit code $exitCode"
+        }
     }
 }

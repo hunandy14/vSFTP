@@ -219,11 +219,10 @@ function Invoke-vSFTP {
         if ($failed -gt 0) { $exitCode = $EXIT_VERIFY_FAILED }
 
     } finally {
-        # Lite 版不需要清理 SSH session
-    }
-
-    $global:LASTEXITCODE = $exitCode
-    if ($exitCode -ne 0) {
-        throw "vSFTP failed with exit code $exitCode"
+        # 設定結束代碼（即使 return 提前結束也會執行）
+        $global:LASTEXITCODE = $exitCode
+        if ($exitCode -ne 0) {
+            throw "vSFTP failed with exit code $exitCode"
+        }
     }
 }

@@ -9,7 +9,7 @@ Describe "Invoke-vSFTP 連線字串" -Tag "Unit" {
         try {
             $env:SFTP_CONNECTION = $null
             
-            $output = & { Invoke-vSFTP -ScriptFile "test/scripts/test-upload.sftp" } 6>&1 2>&1 | Out-String
+            $output = & { try { Invoke-vSFTP -ScriptFile "test/scripts/test-upload.sftp" } catch {} } 6>&1 2>&1 | Out-String
             $output | Should -Match "SFTP_CONNECTION not set"
         } finally {
             $env:SFTP_CONNECTION = $original
@@ -22,7 +22,7 @@ Describe "Invoke-vSFTP 連線字串" -Tag "Unit" {
         try {
             $env:SFTP_CONNECTION = "HostName=localhost"
             
-            $output = & { Invoke-vSFTP -ScriptFile "test/scripts/test-upload.sftp" } 6>&1 2>&1 | Out-String
+            $output = & { try { Invoke-vSFTP -ScriptFile "test/scripts/test-upload.sftp" } catch {} } 6>&1 2>&1 | Out-String
             $output | Should -Match "Missing required fields"
         } finally {
             $env:SFTP_CONNECTION = $original
@@ -35,7 +35,7 @@ Describe "Invoke-vSFTP 連線字串" -Tag "Unit" {
         try {
             $env:SFTP_CONNECTION = "HostName=nonexistent.host;Port=2222;User=testuser;IdentityFile=secrets/id_ed25519"
             
-            $output = & { Invoke-vSFTP -ScriptFile "test/scripts/test-upload.sftp" } 6>&1 2>&1 | Out-String
+            $output = & { try { Invoke-vSFTP -ScriptFile "test/scripts/test-upload.sftp" } catch {} } 6>&1 2>&1 | Out-String
             $output | Should -Match "testuser@nonexistent.host:2222"
         } finally {
             $env:SFTP_CONNECTION = $original
@@ -48,7 +48,7 @@ Describe "Invoke-vSFTP 連線字串" -Tag "Unit" {
         try {
             $env:SFTP_CONNECTION = "User=testuser;IdentityFile=secrets/id_ed25519;HostName=order.test;Port=22"
             
-            $output = & { Invoke-vSFTP -ScriptFile "test/scripts/test-upload.sftp" } 6>&1 2>&1 | Out-String
+            $output = & { try { Invoke-vSFTP -ScriptFile "test/scripts/test-upload.sftp" } catch {} } 6>&1 2>&1 | Out-String
             $output | Should -Match "testuser@order.test:22"
         } finally {
             $env:SFTP_CONNECTION = $original
@@ -61,7 +61,7 @@ Describe "Invoke-vSFTP 連線字串" -Tag "Unit" {
         try {
             $env:SFTP_CONNECTION = "HostName=default-port.test;User=testuser;IdentityFile=secrets/id_ed25519"
             
-            $output = & { Invoke-vSFTP -ScriptFile "test/scripts/test-upload.sftp" } 6>&1 2>&1 | Out-String
+            $output = & { try { Invoke-vSFTP -ScriptFile "test/scripts/test-upload.sftp" } catch {} } 6>&1 2>&1 | Out-String
             $output | Should -Match "testuser@default-port.test:22"
         } finally {
             $env:SFTP_CONNECTION = $original
@@ -74,6 +74,7 @@ Describe "Invoke-vSFTP 連線字串" -Tag "Unit" {
         try {
             $env:SFTP_CONNECTION = "HostName=win.test;User=testuser;IdentityFile=C:\Users\me\.ssh\id_rsa"
             
+            # DryRun 不會 throw（成功返回）
             $output = & { Invoke-vSFTP -ScriptFile "test/scripts/test-upload.sftp" -DryRun } 6>&1 2>&1 | Out-String
             $output | Should -Match "C:\\Users\\me\\\.ssh\\id_rsa"
         } finally {
@@ -87,7 +88,7 @@ Describe "Invoke-vSFTP 連線字串" -Tag "Unit" {
         try {
             $env:SFTP_CONNECTION = "HostName = space.test ; User = testuser ; IdentityFile = secrets/id_ed25519"
             
-            $output = & { Invoke-vSFTP -ScriptFile "test/scripts/test-upload.sftp" } 6>&1 2>&1 | Out-String
+            $output = & { try { Invoke-vSFTP -ScriptFile "test/scripts/test-upload.sftp" } catch {} } 6>&1 2>&1 | Out-String
             $output | Should -Match "testuser@space.test:22"
         } finally {
             $env:SFTP_CONNECTION = $original
