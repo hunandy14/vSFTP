@@ -1,0 +1,3 @@
+lcd /srv/repos/vsftp/test/Lite/../../test/local
+cd /home/testuser/upload
+put test.txt
