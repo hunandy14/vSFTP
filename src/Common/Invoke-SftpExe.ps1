@@ -20,7 +20,7 @@
         [Parameter(Mandatory)][string]$ScriptFile,
         [Parameter(Mandatory)][string]$RemoteHost,
         [Parameter(Mandatory)][string]$User,
-        [Parameter(Mandatory)][string]$KeyFile,
+        [string]$KeyFile,
         [int]$Port = 22,
         [switch]$SkipHostKeyCheck
     )
@@ -46,10 +46,12 @@
         "-b", $ScriptFile,
         "-P", $Port,
         "-o", "StrictHostKeyChecking=$hostKeyOption",
-        "-o", "BatchMode=yes",
-        "-i", $KeyFile,
-        "$User@$RemoteHost"
+        "-o", "BatchMode=yes"
     )
+    if ($KeyFile) {
+        $sftpArgs += "-i", $KeyFile
+    }
+    $sftpArgs += "$User@$RemoteHost"
 
     Write-Verbose "Executing: sftp $($sftpArgs -join ' ')"
 

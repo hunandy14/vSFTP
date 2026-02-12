@@ -22,7 +22,6 @@ function Get-RemoteFileHash {
 
         [int]$Port = 22,
 
-        [Parameter(Mandatory)]
         [string]$KeyFile,
 
         [Parameter(Mandatory)]
@@ -37,8 +36,6 @@ function Get-RemoteFileHash {
     $encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($RemotePath))
 
     # 根據作業系統選擇指令
-    # Linux/macOS: sha256sum/shasum 輸出格式為 "hash  path"（兩個空格分隔）
-    # Windows: 輸出兩行（Path, Hash）
     $remoteCmd = switch ($RemoteOS) {
         'Linux' {
             'f="$(echo ' + $encoded + ' | base64 -d)"; p="$(realpath "$f")"; sha256sum "$p"'
@@ -51,28 +48,16 @@ function Get-RemoteFileHash {
         }
     }
 
-    # 執行 ssh 指令
-    $sshArgs = @(
-        "-i", $KeyFile,
-        "-p", $Port,
-        "-o", "BatchMode=yes",
-        "-o", "StrictHostKeyChecking=accept-new",
-        $SshHost,
-        $remoteCmd
-    )
+    $result = Invoke-SshCommand -SshHost $SshHost -Port $Port -KeyFile $KeyFile -Command $remoteCmd
 
-    $output = & ssh @sshArgs 2>&1
-    $exitCode = $LASTEXITCODE
-
-    if ($exitCode -ne 0) {
-        throw "Failed to get hash for remote file '$RemotePath': $output"
+    if ($result.ExitCode -ne 0) {
+        throw "Failed to get hash for remote file '$RemotePath': $($result.Output)"
     }
 
-    $output = ($output | Out-String).Trim()
+    $output = ($result.Output | Out-String).Trim()
 
     # 解析輸出
     if ($RemoteOS -eq 'Windows') {
-        # Windows: 兩行輸出（Path, Hash）
         $lines = $output -split "`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ }
         if ($lines.Count -lt 2) {
             throw "Unexpected output for '$RemotePath': $output"
@@ -80,7 +65,6 @@ function Get-RemoteFileHash {
         $absolutePath = $lines[0]
         $hash = $lines[1].ToUpper()
     } else {
-        # Linux/macOS: 單行 "hash  path" 格式
         if ($output -notmatch '^([a-fA-F0-9]{64})\s+(.+)$') {
             throw "Unexpected output for '$RemotePath': $output"
         }
@@ -88,7 +72,6 @@ function Get-RemoteFileHash {
         $absolutePath = $Matches[2]
     }
 
-    # 驗證雜湊格式（64 個十六進位字元）
     if ($hash -notmatch '^[A-F0-9]{64}$') {
         throw "Invalid hash returned for '$RemotePath': $hash"
     }

@@ -55,9 +55,7 @@ function ConvertFrom-ConnectionString {
     # 若未指定 IdentityFile，按 OpenSSH 順序自動搜尋
     if (-not $config.KeyFile) {
         $config.KeyFile = Get-DefaultSshKey
-        if (-not $config.KeyFile) {
-            throw "No IdentityFile specified and no default key found in ~/.ssh/ (tried: id_rsa, id_ecdsa, id_ecdsa_sk, id_ed25519, id_ed25519_sk)"
-        }
+        # KeyFile 可以是 $null（Lite 版讓 ssh 自動選擇金鑰）
     }
 
     [PSCustomObject]@{

@@ -85,35 +85,27 @@ function Invoke-vSFTP {
 
         # 偵測遠端 OS（驗證模式）
         $remoteOS = $null; $remoteHashes = @{}; $remotePaths = @{}
-        $hostKeyOption = if ($SkipHostKeyCheck) { "no" } else { "accept-new" }
 
         if (-not $NoVerify) {
             Write-Host "► Detecting remote OS..." -ForegroundColor Yellow
             
-            $sshArgs = @(
-                "-i", $config.KeyFile,
-                "-p", $config.Port,
-                "-o", "BatchMode=yes",
-                "-o", "StrictHostKeyChecking=$hostKeyOption",
-                "-o", "ConnectTimeout=30",
-                $sshHost,
-                "uname -s"
-            )
-            
-            $uname = & ssh @sshArgs 2>&1
-            $unameExit = $LASTEXITCODE
+            $sshParams = @{
+                SshHost = $sshHost; Port = $config.Port; KeyFile = $config.KeyFile
+                SkipHostKeyCheck = $SkipHostKeyCheck
+            }
 
-            if ($unameExit -eq 0) {
-                $remoteOS = switch -Regex (($uname | Out-String).Trim()) {
+            $uname = Invoke-SshCommand @sshParams -Command "uname -s"
+
+            if ($uname.ExitCode -eq 0) {
+                $remoteOS = switch -Regex (($uname.Output | Out-String).Trim()) {
                     'Linux'  { 'Linux' }
                     'Darwin' { 'macOS' }
                     default  { 'Linux' }
                 }
             } else {
                 # 嘗試 Windows
-                $sshArgs[-1] = "powershell -NoProfile -Command `"if (Test-Path 'C:\Windows') { 'Windows' }`""
-                $psTest = & ssh @sshArgs 2>&1
-                if ($LASTEXITCODE -eq 0 -and ($psTest | Out-String).Trim() -eq 'Windows') {
+                $psTest = Invoke-SshCommand @sshParams -Command "powershell -NoProfile -Command `"if (Test-Path 'C:\Windows') { 'Windows' }`""
+                if ($psTest.ExitCode -eq 0 -and ($psTest.Output | Out-String).Trim() -eq 'Windows') {
                     $remoteOS = 'Windows'
                 } else {
                     Write-Host "✗ Failed to detect remote OS" -ForegroundColor Red

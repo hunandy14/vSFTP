@@ -23,7 +23,6 @@ function Expand-GetOperation {
 
         [int]$Port = 22,
 
-        [Parameter(Mandatory)]
         [string]$KeyFile,
 
         [Parameter(Mandatory)]
@@ -51,10 +50,9 @@ function Expand-GetOperation {
         $dirPath = Split-Path $op.RemotePath -Parent
         $pattern = Split-Path $op.RemotePath -Leaf
 
-        # 空目錄路徑時預設為當前目錄
         if (-not $dirPath) { $dirPath = "." }
 
-        # 驗證模式不含危險字元（只允許 * ? [ ] 和一般檔名字元）
+        # 驗證模式不含危險字元
         if ($pattern -match '[;|$`<>&''"\r\n]') {
             throw "Invalid pattern contains dangerous characters: $pattern"
         }
@@ -76,25 +74,14 @@ function Expand-GetOperation {
             }
         }
 
-        # 執行 ssh 指令
-        $sshArgs = @(
-            "-i", $KeyFile,
-            "-p", $Port,
-            "-o", "BatchMode=yes",
-            "-o", "StrictHostKeyChecking=accept-new",
-            $SshHost,
-            $remoteCmd
-        )
+        $result = Invoke-SshCommand -SshHost $SshHost -Port $Port -KeyFile $KeyFile -Command $remoteCmd
 
-        $output = & ssh @sshArgs 2>&1
-        $exitCode = $LASTEXITCODE
-
-        if ($exitCode -ne 0 -or [string]::IsNullOrWhiteSpace(($output | Out-String))) {
+        if ($result.ExitCode -ne 0 -or [string]::IsNullOrWhiteSpace(($result.Output | Out-String))) {
             Write-Host "  ⚠ No files match: $($op.RemotePath)" -ForegroundColor Yellow
             continue
         }
 
-        $remoteFiles = ($output | Out-String) -split "`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ }
+        $remoteFiles = ($result.Output | Out-String) -split "`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ }
         $localDir = Split-Path $op.LocalPath -Parent
 
         foreach ($remoteFile in $remoteFiles) {

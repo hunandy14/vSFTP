@@ -168,13 +168,12 @@ Describe "ConvertFrom-ConnectionString" -Tag "Unit" {
             $result.KeyFile | Should -Be '/home/user/.ssh/id_rsa'
         }
 
-        It "應該在找不到任何金鑰時拋出錯誤" {
-            { 
-                InModuleScope vSFTP { 
-                    Mock Get-DefaultSshKey { return $null }
-                    ConvertFrom-ConnectionString "HostName=example.com;User=admin" 
-                } 
-            } | Should -Throw "*No IdentityFile specified and no default key found*"
+        It "找不到任何金鑰時 KeyFile 應為 null" {
+            InModuleScope vSFTP { 
+                Mock Get-DefaultSshKey { return $null }
+                $result = ConvertFrom-ConnectionString "HostName=example.com;User=admin"
+                $result.KeyFile | Should -BeNullOrEmpty
+            }
         }
 
         It "指定 IdentityFile 時不應自動搜尋" {
