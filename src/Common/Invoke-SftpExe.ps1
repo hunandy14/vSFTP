@@ -55,10 +55,11 @@
 
     # 使用 & 執行並即時顯示輸出
     $output = & sftp @sftpArgs 2>&1
+    $exitCode = $LASTEXITCODE
     $output | ForEach-Object { Write-Host $_ }
 
     return [PSCustomObject]@{
-        ExitCode = $LASTEXITCODE
+        ExitCode = $exitCode
         Output   = $output -join "`n"
     }
 }
