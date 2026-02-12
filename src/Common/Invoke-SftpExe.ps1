@@ -60,8 +60,10 @@
     $exitCode = $LASTEXITCODE
     $output | ForEach-Object { Write-Host $_ }
 
-    return [PSCustomObject]@{
-        ExitCode = $exitCode
-        Output   = $output -join "`n"
+    if ($exitCode -ne 0) {
+        Write-Error "SFTP transfer failed (exit $exitCode): $($output -join "`n")"
+        return
     }
+
+    return ($output -join "`n")
 }

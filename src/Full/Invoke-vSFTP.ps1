@@ -185,8 +185,8 @@
         Write-Host "► Transferring...`n" -ForegroundColor Yellow
         $sftpResult = Invoke-SftpExe -ScriptFile $ScriptFile -RemoteHost $config.Host -User $config.User -Port $config.Port -KeyFile $config.KeyFile -SkipHostKeyCheck:$SkipHostKeyCheck
 
-        if ($sftpResult.ExitCode -ne 0) {
-            Write-Host "`n✗ Transfer failed (code $($sftpResult.ExitCode))" -ForegroundColor Red
+        if (-not $sftpResult) {
+            Write-Host "`n✗ Transfer failed" -ForegroundColor Red
             $exitCode = $EXIT_TRANSFER_FAILED; return
         }
         Write-Host "`n  Done`n" -ForegroundColor Gray
