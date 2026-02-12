@@ -1,0 +1,50 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 建置 Full 版和 Lite 版
+        shell: pwsh
+        run: |
+          ./build.ps1 -StripBlockComments
+          ./build.ps1 -Lite -StripBlockComments
+
+      - name: 取得版本號
+        id: version
+        run: echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+
+      - name: 建立 Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: vSFTP ${{ steps.version.outputs.tag }}
+          body: |
+            ## 下載
+
+            | 檔案 | 說明 |
+            |------|------|
+            | `vSFTP.ps1` | Full 版（需要 [Posh-SSH](https://github.com/darkoperator/Posh-SSH) 模組） |
+            | `vSFTP-Lite.ps1` | Lite 版（純 ssh/sftp 指令，無需額外模組） |
+
+            ### 使用方式
+            ```powershell
+            # 下載後直接執行
+            ./vSFTP.ps1 -ScriptFile upload.sftp
+            ./vSFTP-Lite.ps1 -ScriptFile upload.sftp
+            ```
+          files: |
+            dist/vSFTP.ps1
+            dist/vSFTP-Lite.ps1
+          draft: false
+          prerelease: false
