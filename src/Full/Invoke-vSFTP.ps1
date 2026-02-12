@@ -66,7 +66,7 @@
             $exitCode = $EXIT_CONNECTION_FAILED; return
         }
         Write-Host "Host: $($config.User)@$($config.Host):$($config.Port)" -ForegroundColor Gray
-        Write-Host "Key:  $($config.KeyFile)`n" -ForegroundColor Gray
+        Write-Host "Key:  $(if ($config.KeyFile) { $config.KeyFile } else { '(auto-detect)' })`n" -ForegroundColor Gray
 
         # 解析腳本
         Write-Host "► Parsing: $ScriptFile" -ForegroundColor Yellow
@@ -104,12 +104,37 @@
         if (-not $NoVerify) {
             Write-Host "► Connecting SSH..." -ForegroundColor Yellow
             $sshParams = @{
-                ComputerName = $config.Host; Port = $config.Port; KeyFile = $config.KeyFile
+                ComputerName = $config.Host; Port = $config.Port
                 Credential = New-Object PSCredential($config.User, (New-Object SecureString))
                 ConnectionTimeout = 30; AcceptKey = $true
                 KnownHost = New-SSHMemoryKnownHost
             }
-            $sshSession = New-SSHSession @sshParams
+
+            if ($config.KeyFile) {
+                # 指定了金鑰，直接使用
+                $sshSession = New-SSHSession @sshParams -KeyFile $config.KeyFile
+            } else {
+                # 未指定金鑰，依序嘗試所有找到的金鑰
+                $allKeys = Get-DefaultSshKey -All
+                if (-not $allKeys -or $allKeys.Count -eq 0) {
+                    Write-Host "✗ No SSH key found in ~/.ssh/" -ForegroundColor Red
+                    $exitCode = $EXIT_CONNECTION_FAILED; return
+                }
+                foreach ($tryKey in $allKeys) {
+                    try {
+                        $sshSession = New-SSHSession @sshParams -KeyFile $tryKey
+                        if ($sshSession) {
+                            $config = [PSCustomObject]@{
+                                Host = $config.Host; User = $config.User
+                                Port = $config.Port; KeyFile = $tryKey
+                            }
+                            break
+                        }
+                    } catch {
+                        Write-Verbose "Key failed: $tryKey - $_"
+                    }
+                }
+            }
 
             if (-not $sshSession) {
                 Write-Host "✗ SSH failed" -ForegroundColor Red

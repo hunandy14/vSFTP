@@ -51,7 +51,7 @@ function Invoke-vSFTP {
         
         $sshHost = "$($config.User)@$($config.Host)"
         Write-Host "Host: $sshHost`:$($config.Port)" -ForegroundColor Gray
-        Write-Host "Key:  $($config.KeyFile)`n" -ForegroundColor Gray
+        Write-Host "Key:  $(if ($config.KeyFile) { $config.KeyFile } else { '(auto-detect)' })`n" -ForegroundColor Gray
 
         # 解析腳本
         Write-Host "► Parsing: $ScriptFile" -ForegroundColor Yellow
