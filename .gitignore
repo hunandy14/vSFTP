@@ -22,3 +22,5 @@ secrets/
 
 # Build output
 dist/
+secrets/id_rsa_dummy
+secrets/id_rsa_dummy.pub
