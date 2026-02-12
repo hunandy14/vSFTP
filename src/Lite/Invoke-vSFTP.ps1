@@ -96,16 +96,16 @@ function Invoke-vSFTP {
 
             $uname = Invoke-SshCommand @sshParams -Command "uname -s"
 
-            if ($uname.ExitCode -eq 0) {
-                $remoteOS = switch -Regex (($uname.Output | Out-String).Trim()) {
+            if ($uname) {
+                $remoteOS = switch -Regex (($uname | Out-String).Trim()) {
                     'Linux'  { 'Linux' }
                     'Darwin' { 'macOS' }
                     default  { 'Linux' }
                 }
             } else {
-                # 嘗試 Windows
+                # uname 失敗，嘗試 Windows
                 $psTest = Invoke-SshCommand @sshParams -Command "powershell -NoProfile -Command `"if (Test-Path 'C:\Windows') { 'Windows' }`""
-                if ($psTest.ExitCode -eq 0 -and ($psTest.Output | Out-String).Trim() -eq 'Windows') {
+                if ($psTest -and ($psTest | Out-String).Trim() -eq 'Windows') {
                     $remoteOS = 'Windows'
                 } else {
                     Write-Host "✗ Failed to detect remote OS" -ForegroundColor Red

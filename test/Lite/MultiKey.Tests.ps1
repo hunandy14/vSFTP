@@ -19,28 +19,34 @@ Describe "多金鑰自動嘗試 (Lite)" -Tag "Integration" {
                 param($SshHost, $Port, $Key)
                 Invoke-SshCommand -SshHost $SshHost -Port $Port -KeyFile $Key -Command "echo hello"
             }
-            $result.ExitCode | Should -Be 0
-            ($result.Output | Out-String).Trim() | Should -Be "hello"
+            $result | Should -Not -BeNullOrEmpty
+            ($result | Out-String).Trim() | Should -Be "hello"
         }
 
         It "使用錯誤的金鑰應該失敗" {
             $result = InModuleScope vSFTP -Parameters @{ SshHost = $sshHost; Port = $port; Key = $badKey } {
                 param($SshHost, $Port, $Key)
-                Invoke-SshCommand -SshHost $SshHost -Port $Port -KeyFile $Key -Command "echo hello"
+                Invoke-SshCommand -SshHost $SshHost -Port $Port -KeyFile $Key -Command "echo hello" -ErrorAction SilentlyContinue
             }
-            $result.ExitCode | Should -Not -Be 0
+            $result | Should -BeNullOrEmpty
+        }
+
+        It "使用錯誤的金鑰加 ErrorAction Stop 應該拋出錯誤" {
+            {
+                InModuleScope vSFTP -Parameters @{ SshHost = $sshHost; Port = $port; Key = $badKey } {
+                    param($SshHost, $Port, $Key)
+                    Invoke-SshCommand -SshHost $SshHost -Port $Port -KeyFile $Key -Command "echo hello" -ErrorAction Stop
+                }
+            } | Should -Throw "*SSH command failed*"
         }
 
         It "不指定金鑰時讓 ssh 自動選擇" {
-            # 這個測試取決於系統 ~/.ssh/ 中是否有對應的金鑰
-            # 主要測試不傳 -i 時不會報錯
-            $result = InModuleScope vSFTP -Parameters @{ SshHost = $sshHost; Port = $port } {
+            # 主要測試不傳 -i 時不會報語法錯誤
+            InModuleScope vSFTP -Parameters @{ SshHost = $sshHost; Port = $port } {
                 param($SshHost, $Port)
-                Invoke-SshCommand -SshHost $SshHost -Port $Port -Command "echo auto"
+                Invoke-SshCommand -SshHost $SshHost -Port $Port -Command "echo auto" -ErrorAction SilentlyContinue
             }
-            # 不檢查 ExitCode（可能成功也可能失敗，取決於系統金鑰）
-            $result | Should -Not -BeNullOrEmpty
-            $result.ExitCode | Should -BeOfType [int]
+            # 不檢查結果（取決於系統金鑰）
         }
     }
 
@@ -96,11 +102,10 @@ Describe "多金鑰自動嘗試 (Lite)" -Tag "Integration" {
     Context "Get-RemoteFileHash 多金鑰" {
 
         It "正確金鑰排在第二也能成功（透過 Invoke-SshCommand）" {
-            # 用正確的金鑰直接測試 Get-RemoteFileHash
             # 先確保遠端有測試檔案
             InModuleScope vSFTP -Parameters @{ SshHost = $sshHost; Port = $port; Key = $goodKey } {
                 param($SshHost, $Port, $Key)
-                Invoke-SshCommand -SshHost $SshHost -Port $Port -KeyFile $Key -Command "echo 'test content' > /home/testuser/upload/multikey-test.txt"
+                Invoke-SshCommand -SshHost $SshHost -Port $Port -KeyFile $Key -Command "echo 'test content' > /home/testuser/upload/multikey-test.txt" -ErrorAction Stop
             }
 
             $result = InModuleScope vSFTP -Parameters @{ SshHost = $sshHost; Port = $port; Key = $goodKey } {

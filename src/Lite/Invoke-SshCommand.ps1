@@ -5,6 +5,7 @@ function Invoke-SshCommand {
     .DESCRIPTION
         集中處理 ssh 參數組裝、執行和錯誤捕獲。
         當 KeyFile 為空時不傳 -i，讓 ssh 自動選擇金鑰。
+        執行失敗時使用 Write-Error 報告錯誤（非終止），呼叫者可用 -ErrorAction 控制。
     .PARAMETER SshHost
         遠端主機（user@host 格式）。
     .PARAMETER Port
@@ -16,7 +17,7 @@ function Invoke-SshCommand {
     .PARAMETER SkipHostKeyCheck
         跳過主機金鑰驗證。
     .OUTPUTS
-        PSCustomObject 包含 ExitCode 和 Output 屬性。
+        成功時回傳 ssh 輸出（字串陣列），失敗時 Write-Error 並回傳 $null。
     #>
     [CmdletBinding()]
     param(
@@ -51,8 +52,10 @@ function Invoke-SshCommand {
     $output = & ssh @sshArgs 2>&1
     $exitCode = $LASTEXITCODE
 
-    return [PSCustomObject]@{
-        ExitCode = $exitCode
-        Output   = $output
+    if ($exitCode -ne 0) {
+        Write-Error "SSH command failed (exit $exitCode): $Command`n$($output | Out-String)"
+        return
     }
+
+    return $output
 }

@@ -48,13 +48,9 @@ function Get-RemoteFileHash {
         }
     }
 
-    $result = Invoke-SshCommand -SshHost $SshHost -Port $Port -KeyFile $KeyFile -Command $remoteCmd
+    $result = Invoke-SshCommand -SshHost $SshHost -Port $Port -KeyFile $KeyFile -Command $remoteCmd -ErrorAction Stop
 
-    if ($result.ExitCode -ne 0) {
-        throw "Failed to get hash for remote file '$RemotePath': $($result.Output)"
-    }
-
-    $output = ($result.Output | Out-String).Trim()
+    $output = ($result | Out-String).Trim()
 
     # 解析輸出
     if ($RemoteOS -eq 'Windows') {

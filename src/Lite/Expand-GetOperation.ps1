@@ -76,12 +76,12 @@ function Expand-GetOperation {
 
         $result = Invoke-SshCommand -SshHost $SshHost -Port $Port -KeyFile $KeyFile -Command $remoteCmd
 
-        if ($result.ExitCode -ne 0 -or [string]::IsNullOrWhiteSpace(($result.Output | Out-String))) {
+        if (-not $result -or [string]::IsNullOrWhiteSpace(($result | Out-String))) {
             Write-Host "  ⚠ No files match: $($op.RemotePath)" -ForegroundColor Yellow
             continue
         }
 
-        $remoteFiles = ($result.Output | Out-String) -split "`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ }
+        $remoteFiles = ($result | Out-String) -split "`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ }
         $localDir = Split-Path $op.LocalPath -Parent
 
         foreach ($remoteFile in $remoteFiles) {
